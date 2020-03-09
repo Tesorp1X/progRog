@@ -4,6 +4,10 @@
 #define MAXLENGTH 1024
 #define PTRMAXLEN 64
 
+int isRepeatingRE(char *pattern, char **str) {
+    
+}
+
 char isSimpleRE(char *pattern, char **str) {
     while (*pattern) {
         if (!(**str)) return 0;
