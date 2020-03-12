@@ -86,12 +86,15 @@ int isRepeatingRE(char *pattern, char **str) {
             printf("%c\n", **str);
             return 0;
         }
-        //(*str)++;
     }
     printf("Subpat len in repeatingre is %d\n", strlen(subpat));
+
     return digits + strlen(subpat) + 3; // 3 symbols were skiped in pattern durring check
 }
 
+/*Main function for regular expressions. 
+If given string is correct by given pattern finction returns 1, otherwise 0.
+*/
 char isMatch(char *pattren, char *string) {
     char *str = string;
     char *ptrn = pattren;
@@ -122,11 +125,10 @@ char isMatch(char *pattren, char *string) {
                 printf("Not reapiating\n");
                 return 0;
             }
-
             else ptrn += result;
+            printf("It is repeating\n");
         }
         strempty(subpat);
-        //subpat[0] = 0;
         ptrn++;
     }
 
