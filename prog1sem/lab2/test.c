@@ -10,6 +10,7 @@ char *strempty(char *str) {
 }
 
 char isSimpleRE(char *pattern, char **str) {
+    printf("Pattern in isSimple RE is \'%s\'\n", pattern);
     while (*pattern) {
         if (!((**str) && (*pattern))) return 0;
         /*if (!((**str) && (*pattern))) {
@@ -41,7 +42,6 @@ char isSimpleRE(char *pattern, char **str) {
                 continue;
             }
         }
-        
     }
     return 1;
 }
@@ -88,8 +88,8 @@ int isRepeatingRE(char *pattern, char **str) {
         }
         //(*str)++;
     }
-
-    return digits + strlen(subpat) + 4; // 4 symbols were skiped in pattern durring check
+    printf("Subpat len in repeatingre is %d\n", strlen(subpat));
+    return digits + strlen(subpat) + 3; // 3 symbols were skiped in pattern durring check
 }
 
 char isMatch(char *pattren, char *string) {
@@ -123,9 +123,10 @@ char isMatch(char *pattren, char *string) {
                 return 0;
             }
 
-            else ptrn += result - 1;
+            else ptrn += result;
         }
         strempty(subpat);
+        //subpat[0] = 0;
         ptrn++;
     }
 
