@@ -24,7 +24,7 @@ char isSimpleRE(char *pattern, char **str) {
             printf("%c %c \n", *pattern, **str);
             return 0;
         }*/
-        if (isalpha(*pattern)) {
+        if (isalpha(*pattern) || isdigit(*pattern)) {
             if (*pattern != **str)
                 return 0;
             (*str)++;
