@@ -9,6 +9,10 @@ char *strempty(char *str) {
     return strcpy(str, "");
 }
 
+char isTildaRE(char *pattern, char **str) {
+    
+}
+
 char isSimpleRE(char *pattern, char **str) {
     printf("Pattern in isSimple RE is \'%s\'\n", pattern);
     while (*pattern) {
@@ -116,7 +120,7 @@ char isMatch(char *pattren, char *string) {
                 printf("%s - MissMatch\n", subpat);
                 return 0;
             }
-
+            
         }
         if (*ptrn == '[') {
             ptrn++;
@@ -127,9 +131,9 @@ char isMatch(char *pattren, char *string) {
             }
             else ptrn += result;
             printf("It is repeating\n");
+            ptrn++;
         }
         strempty(subpat);
-        ptrn++;
     }
 
     if (*ptrn == 0 && *str != 0) {
