@@ -10,7 +10,10 @@ char *strempty(char *str) {
 }
 
 char isTildaRE(char *pattern, char **str) {
-    
+    if (**str == *pattern)
+        return 0;
+    (*str)++;
+    return 1;
 }
 
 char isSimpleRE(char *pattern, char **str) {
@@ -131,6 +134,14 @@ char isMatch(char *pattren, char *string) {
             }
             else ptrn += result;
             printf("It is repeating\n");
+            ptrn++;
+        }
+        if (*ptrn == '~') {
+            ptrn++;
+            if (!isTildaRE(ptrn, &str)){
+                printf("Not tilda: Char %c was not expected.", *str);
+                return 0;
+            }
             ptrn++;
         }
         strempty(subpat);
