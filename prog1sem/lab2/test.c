@@ -16,17 +16,13 @@ char isTildaRE(char *pattern, char **str) {
     return 1;
 }
 
-char isSimpleRE(char *pattern, char **str) {
-    printf("Pattern in isSimple RE is \'%s\'\n", pattern);
+char isSimpleRE(char *pattern, char **str, int *PtrDiff) {   //PtrDiff in str for Kleene star
     while (*pattern) {
         if (!((**str) && (*pattern))) return 0;
-        /*if (!((**str) && (*pattern))) {
-            printf("%c %c \n", *pattern, **str);
-            return 0;
-        }*/
         if (isalpha(*pattern) || isdigit(*pattern)) {
             if (*pattern != **str)
                 return 0;
+            (*PtrDiff)++;
             (*str)++;
             pattern++;
         }
@@ -36,12 +32,14 @@ char isSimpleRE(char *pattern, char **str) {
             case 'd':
                 if (!isdigit(**str))
                     return 0;
+                (*PtrDiff)++;
                 (*str)++;
                 pattern++;
                 break;
             case 'D':
                 if (!isalpha(**str))
                     return 0;
+                (*PtrDiff)++;
                 (*str)++;
                 pattern++;
                 break;
@@ -53,11 +51,29 @@ char isSimpleRE(char *pattern, char **str) {
     return 1;
 }
 
+char isKleeneRE(char *pattern, char **str) {
+    char subpat[PTRMAXLEN] = "";
+    int PtrDiff = 0;
+    while (*pattern != '>') {
+        char buff[2];
+        buff[0] = *pattern;
+        buff[1] = '\0';
+        strcat(subpat, buff);
+        pattern++;
+    }
+    while (isSimpleRE(subpat, str, &PtrDiff)) {
+        PtrDiff = 0;
+    }
+    (*str) -= PtrDiff;
+    return strlen(subpat) + 2;
+}
+
 /*Returns pattern pointer shift if true, atherwise return 0.
 Pattern pointer should right after '[' symbol.
 */
-int isRepeatingRE(char *pattern, char **str) {
+char isRepeatingRE(char *pattern, char **str) {
     char subpat[PTRMAXLEN] = "";
+    int PtrDiff = 0;
     int n = 0;
     int pow = 1;
     char *endofnum = pattern;
@@ -74,7 +90,7 @@ int isRepeatingRE(char *pattern, char **str) {
     }
     printf("n = %d\n", n);
     /*Finding pattern to check.*/
-    pattern += 2; //Should be in possition of '*' symbol, so move once to the right twice
+    pattern += 2; //To skip '*' and '('
     while (*pattern != ')') {
         if (*pattern == 0) break;
         char buff[2];
@@ -83,20 +99,16 @@ int isRepeatingRE(char *pattern, char **str) {
         strcat(subpat, buff);
         pattern++;
     }
-    printf("Subpattern is - %s\n", subpat);
     /*Trying to find subpat n times in given string*/
     for (int i = 0; i < n; ++i) {
         if (**str == 0) return 0;
-        if (!isSimpleRE(subpat, str)) {
-            printf("Iterration no. %d\t", i);
-            printf("Not simple\t");
-            printf("%c\n", **str);
+        if (!isSimpleRE(subpat, str, &PtrDiff)) {
             return 0;
         }
     }
     printf("Subpat len in repeatingre is %d\n", strlen(subpat));
 
-    return digits + strlen(subpat) + 3; // 3 symbols were skiped in pattern durring check
+    return digits + strlen(subpat) + 4; // 4 symbols were skiped in pattern durring check
 }
 
 /*Main function for regular expressions. 
@@ -105,6 +117,7 @@ If given string is correct by given pattern finction returns 1, otherwise 0.
 char isMatch(char *pattren, char *string) {
     char *str = string;
     char *ptrn = pattren;
+    int PtrDiff = 0;
     
     char subpat[PTRMAXLEN] = "";
     while (*ptrn) {
@@ -118,23 +131,25 @@ char isMatch(char *pattren, char *string) {
                 ptrn++;
             }
             
-            char match = isSimpleRE(subpat, &str);
+            char match = isSimpleRE(subpat, &str, &PtrDiff);
             if (!match) {
                 printf("%s - MissMatch\n", subpat);
                 return 0;
             }
-            
         }
         if (*ptrn == '[') {
             ptrn++;
             int result = isRepeatingRE(ptrn, &str);
             if (result == 0){
-                printf("Not reapiating\n");
                 return 0;
             }
             else ptrn += result;
-            printf("It is repeating\n");
+           // ptrn++;
+        }
+        if (*ptrn == '<') {
             ptrn++;
+            char result = isKleeneRE(ptrn, &str);
+            ptrn += result;
         }
         if (*ptrn == '~') {
             ptrn++;
