@@ -3,10 +3,28 @@
 #include <ctype.h>
 #define MAXLENGTH 1025
 #define PTRMAXLEN 65
+#define PointerShift 1
 
 char *strempty(char *str) {
-    strcpy(str, "");
-    return strcpy(str, "");
+    char *temp = strcpy(str, "");
+    return temp;
+}
+
+void incrPtr(int *ptrDiff, char **str, char **patr) {
+    (*ptrDiff)++;
+    (*str)++;
+    (*patr)++;
+    return;
+}
+
+void makeSubpat(char *subpat, char **pattern, char stopSymb) {
+    int index = 0;
+    while (**pattern != stopSymb) {
+        subpat[index++] = **pattern;
+        (*pattern)++;
+    }
+    subpat[index] = '\0';
+    return;
 }
 
 char isTildaRE(char *pattern, char **str) {
@@ -16,15 +34,13 @@ char isTildaRE(char *pattern, char **str) {
     return 1;
 }
 
-char isSimpleRE(char *pattern, char **str, int *PtrDiff) {   //PtrDiff in str for Kleene star
+char isSimpleRE(char *pattern, char **str, int *ptrDiff) {   //PtrDiff in str for Kleene star
     while (*pattern) {
-        if (!((**str) && (*pattern))) return 0;
+        if (!(**str)) return 0;
         if (isalpha(*pattern) || isdigit(*pattern)) {
             if (*pattern != **str)
                 return 0;
-            (*PtrDiff)++;
-            (*str)++;
-            pattern++;
+            incrPtr(ptrDiff, str, &pattern);
         }
         if (*pattern == '\\') {
             switch (*(++pattern))
@@ -32,16 +48,12 @@ char isSimpleRE(char *pattern, char **str, int *PtrDiff) {   //PtrDiff in str fo
             case 'd':
                 if (!isdigit(**str))
                     return 0;
-                (*PtrDiff)++;
-                (*str)++;
-                pattern++;
+                incrPtr(ptrDiff, str, &pattern);
                 break;
             case 'D':
                 if (!isalpha(**str))
                     return 0;
-                (*PtrDiff)++;
-                (*str)++;
-                pattern++;
+                incrPtr(ptrDiff, str, &pattern);
                 break;
             default:
                 continue;
@@ -51,21 +63,30 @@ char isSimpleRE(char *pattern, char **str, int *PtrDiff) {   //PtrDiff in str fo
     return 1;
 }
 
+/* Loking after Kleene construction for the same subpattern.
+    R - any valid subpattern. <R>*R transforms into <R>*.
+*/
+char lookafter(char *subpat, char *pattern) {
+    char patlen = strlen(subpat);
+    pattern += 2 * PointerShift;
+    while (*subpat) {
+        if (*subpat != *pattern)
+            return 0;
+        subpat++;
+        pattern++;
+    }
+    return patlen;
+}
+
 char isKleeneRE(char *pattern, char **str) {
     char subpat[PTRMAXLEN] = "";
     int PtrDiff = 0;
-    while (*pattern != '>') {
-        char buff[2];
-        buff[0] = *pattern;
-        buff[1] = '\0';
-        strcat(subpat, buff);
-        pattern++;
-    }
+    makeSubpat(subpat, &pattern, '>');
     while (isSimpleRE(subpat, str, &PtrDiff)) {
         PtrDiff = 0;
     }
     (*str) -= PtrDiff;
-    return strlen(subpat) + 2;
+    return strlen(subpat) + 2 * PointerShift + lookafter(subpat, pattern);
 }
 
 /*Returns pattern pointer shift if true, atherwise return 0.
@@ -89,15 +110,8 @@ char isRepeatingRE(char *pattern, char **str) {
         pattern++;
     }
     /*Finding pattern to check.*/
-    pattern += 2; //To skip '*' and '('
-    while (*pattern != ')') {
-        if (*pattern == 0) break;
-        char buff[2];
-        buff[0] = *pattern;
-        buff[1] = '\0';
-        strcat(subpat, buff);
-        pattern++;
-    }
+    pattern += 2 * PointerShift; //To skip '*' and '('
+    makeSubpat(subpat, &pattern, ')');
     /*Trying to find subpat n times in given string*/
     for (int i = 0; i < n; ++i) {
         if (**str == 0) return 0;
@@ -106,7 +120,7 @@ char isRepeatingRE(char *pattern, char **str) {
         }
     }
 
-    return digits + strlen(subpat) + 4; // 4 symbols were skiped in pattern durring check
+    return digits + strlen(subpat) + 4 * PointerShift; // 4 symbols were skiped in pattern durring check
 }
 
 /*Main function for regular expressions. 
@@ -120,15 +134,13 @@ char isMatch(char *pattren, char *string) {
     char subpat[PTRMAXLEN] = "";
     while (*ptrn) {
         if(isalpha(*ptrn) || *ptrn == '\\' || isdigit(*ptrn)) {
+            int index = 0;
             while (isalpha(*ptrn) || *ptrn == '\\' || isdigit(*ptrn)) {
                 if (*ptrn == 0) break;
-                char buff[2];
-                buff[0] = *ptrn;
-                buff[1] = '\0';
-                strcat(subpat, buff);
+                subpat[index++] = *ptrn;
                 ptrn++;
             }
-            
+            subpat[index] = '\0';
             char match = isSimpleRE(subpat, &str, &PtrDiff);
             if (!match) {
                 return 0;
@@ -137,7 +149,7 @@ char isMatch(char *pattren, char *string) {
         if (*ptrn == '[') {
             ptrn++;
             int result = isRepeatingRE(ptrn, &str);
-            if (result == 0){
+            if (result == 0) {
                 return 0;
             }
             else ptrn += result;
