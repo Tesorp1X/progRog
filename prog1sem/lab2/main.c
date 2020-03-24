@@ -3,7 +3,15 @@
 #include <ctype.h>
 #define MAXLENGTH 1025
 #define PTRMAXLEN 65
-#define PointerShift 1
+#define pointerShift 1
+
+char isMatch(char *pattren, char *string);
+
+char *strend(char *str) {
+    char *endOfPatrn = str;
+    while (*(endOfPatrn++)) {}
+    return endOfPatrn;
+}
 
 char *strempty(char *str) {
     char *temp = strcpy(str, "");
@@ -14,7 +22,6 @@ void incrPtr(int *ptrDiff, char **str, char **patr) {
     (*ptrDiff)++;
     (*str)++;
     (*patr)++;
-    return;
 }
 
 void makeSubpat(char *subpat, char **pattern, char stopSymb) {
@@ -24,7 +31,6 @@ void makeSubpat(char *subpat, char **pattern, char stopSymb) {
         (*pattern)++;
     }
     subpat[index] = '\0';
-    return;
 }
 
 char isTildaRE(char *pattern, char **str) {
@@ -34,7 +40,7 @@ char isTildaRE(char *pattern, char **str) {
     return 1;
 }
 
-char isSimpleRE(char *pattern, char **str, int *ptrDiff) {   //PtrDiff in str for Kleene star
+char isSimpleRE(char *pattern, char **str, int *ptrDiff) {   //ptrDiff in str for Kleene star
     while (*pattern) {
         if (!(**str)) return 0;
         if (isalpha(*pattern) || isdigit(*pattern)) {
@@ -66,27 +72,88 @@ char isSimpleRE(char *pattern, char **str, int *ptrDiff) {   //PtrDiff in str fo
 /* Loking after Kleene construction for the same subpattern.
     R - any valid subpattern. <R>*R transforms into <R>*.
 */
-char lookafter(char *subpat, char *pattern) {
+char endOfKleene(char *subpat, char *pattern) {
+
+    char *endOfPatrn = strend(pattern);
     char patlen = strlen(subpat);
-    pattern += 2 * PointerShift;
-    while (*subpat) {
-        if (*subpat != *pattern)
-            return 0;
-        subpat++;
+    int times = 0;
+    while (strstr(pattern, subpat) == pattern) {
+        
+        pattern += patlen;
+        times++;
+    }
+    return patlen * times;
+}
+
+void makeNPattern(char * newPatt,char *kleenepatt,char *patttern, int n) {
+    for (int i = 0; i < n; ++i) strcat(newPatt, kleenepatt);
+    strcat(newPatt, patttern);
+}
+
+int patternlen(char *pattern) {
+    int len = 0;
+    while (*pattern) {
+        if (*pattern == '[') {
+            int n = 0;
+            int pow = 1;
+            char *endofnum = pattern;
+            while (*endofnum != '*') {
+                pow *= 10;
+                endofnum++;
+            }
+            int digits = endofnum - pattern;
+            endofnum = NULL;
+            while (*pattern != '*') {
+                pow /= 10;
+                n += (*(pattern) - '0') * pow;
+                pattern++;
+            }
+            int patlen = 0;
+            while (*pattern != ')') {
+                patlen++;
+                pattern++;
+            }
+            len += n * patlen;
+        }
+        if ((*pattern == '\\' ) || (*pattern == '~')) pattern++;
+        len++;
         pattern++;
     }
-    return patlen;
+    return len;
 }
 
 char isKleeneRE(char *pattern, char **str) {
     char subpat[PTRMAXLEN] = "";
-    int PtrDiff = 0;
+    char kleenepat[PTRMAXLEN] = "\0";
+    char newPatt[PTRMAXLEN] = "\0";
+    char *strsave = *str;
+    int ptrDiff = 0;
     makeSubpat(subpat, &pattern, '>');
-    while (isSimpleRE(subpat, str, &PtrDiff)) {
-        PtrDiff = 0;
+    kleenepat[0] = '<';
+    strcat(kleenepat, subpat);
+    kleenepat[strlen(subpat) + 1] = '>';
+    kleenepat[strlen(subpat) + 2] = '*';
+    kleenepat[strlen(subpat) + 3] = '\0';
+    pattern += 2 * pointerShift;
+    ptrDiff += endOfKleene(kleenepat, pattern);
+    pattern += ptrDiff;
+    ptrDiff += 2 + strlen(subpat);
+    int n = 0;
+    int res;
+    int newPatLen = 0;
+    while (newPatLen <= strlen(*str)) {
+        makeNPattern(newPatt, subpat, pattern, n);
+        res = isMatch(newPatt, strsave);
+        if (!res) n++;
+        else {
+            (*str) += res;
+            return -1;
+        }
+        newPatLen = patternlen(newPatt);
+        strempty(newPatt);
     }
-    (*str) -= PtrDiff;
-    return strlen(subpat) + 2 * PointerShift + lookafter(subpat, pattern);
+
+    return ptrDiff;
 }
 
 /*Returns pattern pointer shift if true, atherwise return 0.
@@ -94,7 +161,7 @@ Pattern pointer should right after '[' symbol.
 */
 char isRepeatingRE(char *pattern, char **str) {
     char subpat[PTRMAXLEN] = "";
-    int PtrDiff = 0;
+    int ptrDiff = 0;
     int n = 0;
     int pow = 1;
     char *endofnum = pattern;
@@ -110,17 +177,17 @@ char isRepeatingRE(char *pattern, char **str) {
         pattern++;
     }
     /*Finding pattern to check.*/
-    pattern += 2 * PointerShift; //To skip '*' and '('
+    pattern += 2 * pointerShift; //To skip '*' and '('
     makeSubpat(subpat, &pattern, ')');
     /*Trying to find subpat n times in given string*/
     for (int i = 0; i < n; ++i) {
         if (**str == 0) return 0;
-        if (!isSimpleRE(subpat, str, &PtrDiff)) {
+        if (!isSimpleRE(subpat, str, &ptrDiff)) {
             return 0;
         }
     }
 
-    return digits + strlen(subpat) + 4 * PointerShift; // 4 symbols were skiped in pattern durring check
+    return digits + strlen(subpat) + 4 * pointerShift; // 4 symbols were skiped in pattern durring check
 }
 
 /*Main function for regular expressions. 
@@ -129,7 +196,7 @@ If given string is correct by given pattern finction returns 1, otherwise 0.
 char isMatch(char *pattren, char *string) {
     char *str = string;
     char *ptrn = pattren;
-    int PtrDiff = 0;
+    int ptrDiff = 0;
     
     char subpat[PTRMAXLEN] = "";
     while (*ptrn) {
@@ -141,7 +208,7 @@ char isMatch(char *pattren, char *string) {
                 ptrn++;
             }
             subpat[index] = '\0';
-            char match = isSimpleRE(subpat, &str, &PtrDiff);
+            char match = isSimpleRE(subpat, &str, &ptrDiff);
             if (!match) {
                 return 0;
             }
@@ -157,6 +224,7 @@ char isMatch(char *pattren, char *string) {
         if (*ptrn == '<') {
             ptrn++;
             char result = isKleeneRE(ptrn, &str);
+            if (result == -1) return 1;
             ptrn += result;
         }
         if (*ptrn == '~') {
@@ -172,7 +240,7 @@ char isMatch(char *pattren, char *string) {
     if (*ptrn == 0 && *str != 0) {
         return 0;
     }
-    return 1;
+    return ptrDiff;
 }
 
 int main() {
@@ -184,19 +252,30 @@ int main() {
 
 
     in = fopen("input.txt", "r");
-    out = fopen("output.txt", "w+");
+    out = fopen("output.txt", "w");
+    if (in == NULL) {
+        printf("ERROR: No such file as input.txt .");
+        return 1;
+    }
+    if (out == NULL) {
+        printf("ERROR: No such file as output.txt .");
+        return 1;
+    }
     fscanf(in, "%s", pattern);
     fscanf(in, "%d", &n);
 
     for (int i = 0; i < n; ++i) {
         fscanf(in, "%s", line);
+        
         if (isMatch(pattern, line)){
             flag = 1;
             fprintf(out, "%d ", i);
         }
+
     }
+
     fclose(in);
-    if (!flag)
+    if (!flag) 
         fprintf(out, "none");
     fclose(out);
 
