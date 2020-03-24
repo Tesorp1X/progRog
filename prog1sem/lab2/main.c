@@ -85,9 +85,12 @@ char endOfKleene(char *subpat, char *pattern) {
     return patlen * times;
 }
 
-void makeNPattern(char * newPatt,char *kleenepatt,char *patttern, int n) {
+char makeNPattern(char * newPatt,char *kleenepatt,char *patttern, int n) {
+    int len = strlen(kleenepatt) * n;
+    if (len > PTRMAXLEN) return -1;
     for (int i = 0; i < n; ++i) strcat(newPatt, kleenepatt);
     strcat(newPatt, patttern);
+    return 0;
 }
 
 int patternlen(char *pattern) {
@@ -142,7 +145,7 @@ char isKleeneRE(char *pattern, char **str) {
     int res;
     int newPatLen = 0;
     while (newPatLen <= strlen(*str)) {
-        makeNPattern(newPatt, subpat, pattern, n);
+        if (makeNPattern(newPatt, subpat, pattern, n)) break;
         res = isMatch(newPatt, strsave);
         if (!res) n++;
         else {
