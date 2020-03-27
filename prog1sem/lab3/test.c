@@ -8,6 +8,11 @@ typedef struct Matrix {
     int **data; // a pointer to an array of n_rows = size pointers to rows; a row is an array of n_row = size integers
 }Matrix;
 
+void swap(Matrix **a, Matrix **b) {
+    Matrix *temp = *a;
+    *a = *b;
+    *b = temp;
+}
 
 Matrix *make_matrix(int size) {
     Matrix *matrix = (Matrix *) malloc(sizeof(Matrix));
@@ -93,7 +98,7 @@ int main() {
     }
 
 
-
+    swap(&m[0], &m[1]);
     if (flag == n) fprintf(out, "Read.\n");
     for (int mat = 0; mat < n; ++mat) {
         print_matrix(out, m[mat]);
