@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <ctype.h>
+//#include <ctype.h>
 #include <time.h>
 #include <stdlib.h>
 
@@ -73,9 +73,9 @@ int Matrix_det(Matrix *a) {
 /*Sorts m by raising determinant value. m - array of matrices */
 void Matrix_qSort(Matrix **m, int first, int last) {
     srand(time(NULL));
-    int pivot = m[first + rand() % (last - first)]->det;
-    printf("Pivot is %d\n", pivot);
+    int pivot = m[first + rand() % (last - first + 1)]->det;
     int left = first, right = last;
+
     while (left < right) {
         while (m[left]->det < pivot)
             left++;
@@ -113,6 +113,10 @@ int main() {
 
     /*Input*/
     in = fopen("input.txt", "r");
+    if (in == NULL) {
+        printf("Error: No such file as input.txt.");
+        return 1;
+    }
     fscanf(in, "%d", &n);
     m = (Matrix **) malloc(n * sizeof(Matrix **));
     if (m == NULL) {
@@ -131,17 +135,18 @@ int main() {
         flag++;
         Matrix_det(m[mat]);
     }
-    
+
+    /*Sorting array of matrices.*/
+    Matrix_qSort(m, 0, n - 1);
+
     /*Output*/
     out = fopen("output.txt", "w+");
-    /*for (int mat = 0; mat < n; ++mat) {
-        fprintf(out, "%d\t", m[mat]->det);
+    if (out == NULL) {
+        printf("Error: No such file as output.txt.");
+        return 1;
     }
-    fprintf(out, "\n");*/
-    Matrix_qSort(m, 0, n - 1);
     for (int mat = 0; mat < n; ++mat) {
         Matrix_fprintf(out, m[mat]);
-        //fprintf(out, "%d\t", m[mat]->det);
         if (mat < n - 1) fprintf(out, "\n");
         Matrix_delete(m[mat]);
     }
