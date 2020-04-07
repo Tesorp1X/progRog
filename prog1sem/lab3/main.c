@@ -1,12 +1,14 @@
 #include <stdio.h>
-//#include <ctype.h>
+#include <ctype.h>
 #include <time.h>
 #include <stdlib.h>
-
+#define MAX_VALUE 1000 //Max value for matrix elements
+#define MAX_ELEMENTS 15 //Max ammount of elements
+#define MAX_SIZE 10 //Max size of the matrix
 
 typedef struct Matrix {
     int size; // number of rows
-    int det; // number of columns
+    int det; // determinant
     int **data; // a pointer to an array of n_rows = size pointers to rows; a row is an array of n_row = size integers
 }Matrix;
 
@@ -44,12 +46,21 @@ Matrix *Matrix_delete(Matrix *m) {
 int Matrix_det(Matrix *a) {
     char isPlus = 1;
     int det = 0;
-    if (a->size == 1) {
+    switch (a->size)
+    {
+    case 1:
         a->det = a->data[0][0];
         return a->data[0][0];
+        break;
+    case 2:
+        a->det = a->data[0][0] * a->data[1][1] - a->data[0][1] * a->data[1][0];
+        return a->det;
+        break;
+    default:
+        break;
     }
+    Matrix *m = Matrix_make(a->size - 1);
     for (int i = 0; i < a->size; ++i) {
-        Matrix *m = Matrix_make(a->size - 1);
         for (int j = 0; j < m->size; ++j)
             for (int k = 0; k < m->size; ++k)
                 if (k < i)
@@ -63,9 +74,9 @@ int Matrix_det(Matrix *a) {
         } else {
             det -= elem * Matrix_det(m);
             isPlus = 1;
-        }
-        Matrix_delete(m);
+        }   
     }
+    Matrix_delete(m);
     a->det = det;
     return det;
 }
@@ -105,6 +116,23 @@ void Matrix_fprintf(FILE *out, Matrix *m) {
     }
 }
 
+Matrix *Matrix_random(size_t size) {
+    Matrix *m = Matrix_make(size);
+    int **a = m->data;
+    srand(time(NULL));
+    for (int i = 0; i < size; ++i)
+        for (int j = 0; j < size; ++j)
+            a[i][j] = rand() % 1000; // generating "random" number between 0 and 999
+    return m;
+}
+
+void testSys() {
+    /*          Calculating time
+    float fTimeStart = clock()/(float)CLOCKS_PER_SEC; 
+    float fTimeStop = clock()/(float)CLOCKS_PER_SEC;*/ 
+    
+
+}
 
 int main() {
     Matrix **m;
