@@ -13,6 +13,7 @@
 typedef struct Matrix {
     int size; // number of rows
     int det; // determinant
+    char isDet;
     int **data; // a pointer to an array of n_rows = size pointers to rows; a row is an array of n_row = size integers
 }Matrix;
 
@@ -31,15 +32,17 @@ void Matrix_swap(Matrix **a, Matrix **b) {
 
 Matrix *Matrix_make(int size) {
     Matrix *matrix = (Matrix *) malloc(sizeof(Matrix));
-    matrix->size = size;
-    int **data = (int **) malloc(sizeof(int *) * size); 
-    if (data == NULL) return NULL;
-    for(int i = 0; i < size; i++){
-        data[i] =  (int *) malloc(size * sizeof(int));
+    if (matrix) {
+        matrix->size = size;
+        int **data = (int **) malloc(sizeof(int *) * size); 
         if (data == NULL) return NULL;
+        for(int i = 0; i < size; i++){
+            data[i] =  (int *) malloc(size * sizeof(int));
+            if (data == NULL) return NULL;
+        }
+        matrix->data = data;
+        matrix->isDet = 0;
     }
-    matrix->data = data;
-    matrix->det = 0;
     return matrix;
 }
 
@@ -52,47 +55,51 @@ Matrix *Matrix_delete(Matrix *m) {
 
 
 int Matrix_det(Matrix *a) {
+    if (a->isDet == 1) return a->det;
     char isPlus = 1;
     int det = 0;
     switch (a->size)
     {
     case 1:
         a->det = a->data[0][0];
+        a->isDet = 1;
         return a->data[0][0];
         break;
     case 2:
         a->det = a->data[0][0] * a->data[1][1] - a->data[0][1] * a->data[1][0];
+        a->isDet = 1;
         return a->det;
         break;
-  /*  case 3:
-        a->det = a->data[0][0] * a->data[1][1] * a->data[2][2] + a->data[0][2] * a->data[1][0] * a->data[2][1]
-         + a->data[1][2] * a->data[0][1] * a->data[2][0] - ; */
     default:
         break;
     }
     Matrix *m = (Matrix *) Matrix_make(a->size - 1);
-    for (int i = 0; i < a->size; ++i) {
-        for (int j = 0; j < m->size; ++j)
-            for (int k = 0; k < m->size; ++k)
-                if (k < i)
-                    m->data[j][k] = a->data[j + 1][k];
-                else m->data[j][k] = a->data[j + 1][k + 1];
-        
-        int elem = a->data[0][i];
-        if (isPlus) {
-            det += elem * Matrix_det(m);
-            isPlus = 0;
-        } else {
-            det -= elem * Matrix_det(m);
-            isPlus = 1;
-        }   
+    if (m) {
+        for (int i = 0; i < a->size; ++i) {
+            for (int j = 0; j < m->size; ++j)
+                for (int k = 0; k < m->size; ++k)
+                    if (k < i)
+                        m->data[j][k] = a->data[j + 1][k];
+                    else m->data[j][k] = a->data[j + 1][k + 1];
+            
+            int elem = a->data[0][i];
+            if (isPlus) {
+                det += elem * Matrix_det(m);
+                isPlus = 0;
+            } else {
+                det -= elem * Matrix_det(m);
+                isPlus = 1;
+            }   
+        }
     }
     Matrix_delete(m);
     a->det = det;
+    a->isDet = 1;
     return det;
 }
 
-void Matrix_bubleSort(Matrix **m, size_t size) {
+void Matrix_bubleSort(Matrix **m, int fake, int size) {
+    size++;
     for (int i = 0; i < size - 1; ++i)
         for (int j = 0; j < size - i - 1; ++j)
             if (m[j]->det > m[j + 1]->det)
@@ -145,6 +152,7 @@ void Matrix_fprintf(FILE *out, Matrix *m) {
 Matrix *Matrix_random() {
     size_t size = MIN_SIZE + rand() % MAX_SIZE; 
     Matrix *m = Matrix_make(size);
+    if (!m) return NULL;
     for (int i = 0; i < size; ++i)
         for (int j = 0; j < size; ++j)
             m->data[i][j] = rand() % MAX_VALUE; // generating "random" number between 0 and MAX_VALUE - 1
@@ -152,37 +160,25 @@ Matrix *Matrix_random() {
     return m;
 }
 
-void timeTest(Matrix **array, size_t size, TimeValues *time, char type) {
+void timeTest(Matrix **array, size_t size, TimeValues *time, void (*sortFunc) (Matrix **, int, int)) {
     time->avarage = 0;
     time->deviation = 0;
     double fTimeStart; 
     double fTimeStop;
     double *res = malloc(AMMOUNT_OF_EVALUATIONS * sizeof(double));
-    if (type == 1) {
+    if (res) {
         for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i) {
             fTimeStart = clock()/(double)CLOCKS_PER_SEC;
-            Matrix_qSort(array, 0, size - 1);
+            sortFunc(array, 0, size - 1);
             fTimeStop = clock()/(double)CLOCKS_PER_SEC;
             res[i] = (fTimeStop - fTimeStart) / AMMOUNT_OF_EVALUATIONS;
             time->avarage += res[i] / AMMOUNT_OF_EVALUATIONS;
         }
         for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i)
             time->deviation += pow((time->avarage - res[i]), 2);
-        free(res);
-        time->deviation = sqrt(time->deviation);
-    } else if (type == 0) {
-        for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i) {
-            fTimeStart = clock()/(double)CLOCKS_PER_SEC;
-            Matrix_bubleSort(array, size);
-            fTimeStop = clock()/(double)CLOCKS_PER_SEC;
-            res[i] = (fTimeStop - fTimeStart) / AMMOUNT_OF_EVALUATIONS;
-            time->avarage += res[i] / AMMOUNT_OF_EVALUATIONS;
-        }
-        for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i)
-            time->deviation += pow((time->avarage - res[i]), 2);
-        free(res);
-        time->deviation = sqrt(time->deviation);
     }
+    free(res);
+    time->deviation = sqrt(time->deviation / AMMOUNT_OF_EVALUATIONS);
 }
 
 void testSys(char type) {
@@ -203,9 +199,10 @@ void testSys(char type) {
         Matrix **array = (Matrix **) malloc(n * sizeof(Matrix *));
         for (int i = 0; i < n; ++i) {
             array[i] = Matrix_random();
-            Matrix_det(array[i]);
+            if (array[i]) Matrix_det(array[i]);
         }
-        timeTest(array, n, &tempTime, type);
+        if (type == 0) timeTest(array, n, &tempTime, &Matrix_bubleSort);
+        else if (type == 1) timeTest(array, n, &tempTime, &Matrix_qSort);
         printf("Iteration #%d:\n", test + 1);
         printf("Average time: %.12lf; Deviation: %.12lf\n", tempTime.avarage, tempTime.deviation);
         if (flag) {
@@ -224,7 +221,7 @@ void testSys(char type) {
             wsize = n;
             array = NULL;
         } else if (!flag && tempTime.avarage < bestTime.avarage) {
-            for (int j = 0; j < wsize; ++j) Matrix_delete(bestData[j]);
+            for (int j = 0; j < bsize; ++j) Matrix_delete(bestData[j]);
             free(bestData);
             bestTime = tempTime;
             bestData = array;
@@ -238,17 +235,17 @@ void testSys(char type) {
     printf("Best average time is: %.12lf and best diviation: %.12lf\nAnd data is:\n", bestTime.avarage, bestTime.deviation);
     for (int i = 0; i < bsize; ++i) {
         Matrix_printf(bestData[i]);
-        Matrix_delete(bestData[i]);
         putchar('\n');
         printf("Det is %d\n", bestData[i]->det);
+        Matrix_delete(bestData[i]);
         putchar('\n');
     } 
     printf("Worst average time is: %.12lf and worst diviation: %.12lf\nAnd data is:\n", worstTime.avarage, worstTime.deviation);
     for (int i = 0; i < wsize; ++i) {
         Matrix_printf(worstData[i]);
-        Matrix_delete(worstData[i]);
         putchar('\n');
         printf("Det is %d\n", worstData[i]->det);
+        Matrix_delete(worstData[i]);
         putchar('\n');
     }
     free(worstData);
@@ -256,11 +253,10 @@ void testSys(char type) {
 }
 
 int main() {
-    
-    Matrix **m;
+   /* Matrix **m;
     FILE *in, *out;
     int n, matrSize, flag = 0;
-
+*/
     /*Input*/
  /*   in = fopen("input.txt", "r");
     if (in == NULL) {
@@ -305,7 +301,6 @@ int main() {
     char type;
     printf("Type 0 if you want to test a bubleSort or 1 if quickSort.\n");
     scanf("%d", &type);
-   // srand(time(NULL));
     testSys(type);
 
     return 0;
