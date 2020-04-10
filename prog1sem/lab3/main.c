@@ -2,9 +2,13 @@
 #include <ctype.h>
 #include <time.h>
 #include <stdlib.h>
-#define MAX_VALUE 1000 //Max value for matrix elements
-#define MAX_ELEMENTS 15 //Max ammount of elements
-#define MAX_SIZE 10 //Max size of the matrix
+#include <math.h>
+#define MAX_VALUE 10 //Max value for matrix elements
+#define MAX_ELEMENTS 100 //Max ammount of elements
+#define MAX_SIZE 5 //Max size of the matrix
+#define AMMOUNT_OF_EVALUATIONS 1000
+#define AMMOUNT_OF_DIFFERENT_DATA 5
+#define MIN_SIZE 1 //Min size of matrix or an array
 
 typedef struct Matrix {
     int size; // number of rows
@@ -12,6 +16,10 @@ typedef struct Matrix {
     int **data; // a pointer to an array of n_rows = size pointers to rows; a row is an array of n_row = size integers
 }Matrix;
 
+typedef struct TimeValues {
+    double avarage;
+    double deviation;
+}TimeValues;
 
 void Matrix_swap(Matrix **a, Matrix **b) {
     Matrix *temp = *a;
@@ -24,10 +32,10 @@ void Matrix_swap(Matrix **a, Matrix **b) {
 Matrix *Matrix_make(int size) {
     Matrix *matrix = (Matrix *) malloc(sizeof(Matrix));
     matrix->size = size;
-    int **data = malloc(sizeof(int *) * size); 
+    int **data = (int **) malloc(sizeof(int *) * size); 
     if (data == NULL) return NULL;
     for(int i = 0; i < size; i++){
-        data[i] =  malloc(size * sizeof(int));
+        data[i] =  (int *) malloc(size * sizeof(int));
         if (data == NULL) return NULL;
     }
     matrix->data = data;
@@ -56,10 +64,13 @@ int Matrix_det(Matrix *a) {
         a->det = a->data[0][0] * a->data[1][1] - a->data[0][1] * a->data[1][0];
         return a->det;
         break;
+  /*  case 3:
+        a->det = a->data[0][0] * a->data[1][1] * a->data[2][2] + a->data[0][2] * a->data[1][0] * a->data[2][1]
+         + a->data[1][2] * a->data[0][1] * a->data[2][0] - ; */
     default:
         break;
     }
-    Matrix *m = Matrix_make(a->size - 1);
+    Matrix *m = (Matrix *) Matrix_make(a->size - 1);
     for (int i = 0; i < a->size; ++i) {
         for (int j = 0; j < m->size; ++j)
             for (int k = 0; k < m->size; ++k)
@@ -81,9 +92,16 @@ int Matrix_det(Matrix *a) {
     return det;
 }
 
+void Matrix_bubleSort(Matrix **m, size_t size) {
+    for (int i = 0; i < size - 1; ++i)
+        for (int j = 0; j < size - i - 1; ++j)
+            if (m[j]->det > m[j + 1]->det)
+                Matrix_swap(&m[j], &m[j + 1]);
+}
+
 /*Sorts m by raising determinant value. m - array of matrices */
 void Matrix_qSort(Matrix **m, int first, int last) {
-    srand(time(NULL));
+    //srand(time(NULL));
     int pivot = m[first + rand() % (last - first + 1)]->det;
     int left = first, right = last;
 
@@ -100,6 +118,14 @@ void Matrix_qSort(Matrix **m, int first, int last) {
     if (left < last) Matrix_qSort(m, left, last);
 }
 
+void Matrix_printf(Matrix *m) {
+    int size = m->size;
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j)
+            printf("%d ", m->data[i][j]);
+        if (i < size - 1) printf("\n");
+    }
+}
 
 void Matrix_fscanf(FILE *in, Matrix *m) {
     for (int i = 0; i < m->size; ++i)
@@ -116,31 +142,127 @@ void Matrix_fprintf(FILE *out, Matrix *m) {
     }
 }
 
-Matrix *Matrix_random(size_t size) {
+Matrix *Matrix_random() {
+    size_t size = MIN_SIZE + rand() % MAX_SIZE; 
     Matrix *m = Matrix_make(size);
-    int **a = m->data;
-    srand(time(NULL));
     for (int i = 0; i < size; ++i)
         for (int j = 0; j < size; ++j)
-            a[i][j] = rand() % 1000; // generating "random" number between 0 and 999
+            m->data[i][j] = rand() % MAX_VALUE; // generating "random" number between 0 and MAX_VALUE - 1
+    
     return m;
 }
 
-void testSys() {
-    /*          Calculating time
-    float fTimeStart = clock()/(float)CLOCKS_PER_SEC; 
-    float fTimeStop = clock()/(float)CLOCKS_PER_SEC;*/ 
-    
+void timeTest(Matrix **array, size_t size, TimeValues *time, char type) {
+    time->avarage = 0;
+    time->deviation = 0;
+    double fTimeStart; 
+    double fTimeStop;
+    double *res = malloc(AMMOUNT_OF_EVALUATIONS * sizeof(double));
+    if (type == 1) {
+        for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i) {
+            fTimeStart = clock()/(double)CLOCKS_PER_SEC;
+            Matrix_qSort(array, 0, size - 1);
+            fTimeStop = clock()/(double)CLOCKS_PER_SEC;
+            res[i] = (fTimeStop - fTimeStart) / AMMOUNT_OF_EVALUATIONS;
+            time->avarage += res[i] / AMMOUNT_OF_EVALUATIONS;
+        }
+        for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i)
+            time->deviation += pow((time->avarage - res[i]), 2);
+        free(res);
+        time->deviation = sqrt(time->deviation);
+    } else if (type == 0) {
+        for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i) {
+            fTimeStart = clock()/(double)CLOCKS_PER_SEC;
+            Matrix_bubleSort(array, size);
+            fTimeStop = clock()/(double)CLOCKS_PER_SEC;
+            res[i] = (fTimeStop - fTimeStart) / AMMOUNT_OF_EVALUATIONS;
+            time->avarage += res[i] / AMMOUNT_OF_EVALUATIONS;
+        }
+        for (int i = 0; i < AMMOUNT_OF_EVALUATIONS; ++i)
+            time->deviation += pow((time->avarage - res[i]), 2);
+        free(res);
+        time->deviation = sqrt(time->deviation);
+    }
+}
 
+void testSys(char type) {
+    /*          Calculating time
+    double fTimeStart = clock()/(double))CLOCKS_PER_SEC; 
+    double fTimeStop = clock()/(double)CLOCKS_PER_SEC; */ 
+    srand(time(NULL));
+    TimeValues bestTime;
+    TimeValues worstTime;
+    Matrix **bestData;
+    Matrix **worstData;
+    size_t bsize;
+    size_t wsize;
+    int flag = 1;
+    for (int test = 0; test < AMMOUNT_OF_DIFFERENT_DATA; ++test) {
+        int n = MIN_SIZE + rand() % MAX_ELEMENTS;
+        TimeValues tempTime;
+        Matrix **array = (Matrix **) malloc(n * sizeof(Matrix *));
+        for (int i = 0; i < n; ++i) {
+            array[i] = Matrix_random();
+            Matrix_det(array[i]);
+        }
+        timeTest(array, n, &tempTime, type);
+        printf("Iteration #%d:\n", test + 1);
+        printf("Average time: %.12lf; Deviation: %.12lf\n", tempTime.avarage, tempTime.deviation);
+        if (flag) {
+            bestTime = tempTime;
+            worstTime = tempTime;
+            bestData = array;
+            worstData = array;
+            bsize = n;
+            wsize = n;
+            array = NULL;
+        } else if (!flag && tempTime.avarage > worstTime.avarage) {
+            for (int j = 0; j < wsize; ++j) Matrix_delete(worstData[j]);
+            free(worstData);
+            worstTime = tempTime;
+            worstData = array;
+            wsize = n;
+            array = NULL;
+        } else if (!flag && tempTime.avarage < bestTime.avarage) {
+            for (int j = 0; j < wsize; ++j) Matrix_delete(bestData[j]);
+            free(bestData);
+            bestTime = tempTime;
+            bestData = array;
+            bsize = n;
+            array = NULL;
+        } else {
+            for (int j = 0; j < n; ++j) Matrix_delete(array[j]);
+            free(array);
+        }
+    }
+    printf("Best average time is: %.12lf and best diviation: %.12lf\nAnd data is:\n", bestTime.avarage, bestTime.deviation);
+    for (int i = 0; i < bsize; ++i) {
+        Matrix_printf(bestData[i]);
+        Matrix_delete(bestData[i]);
+        putchar('\n');
+        printf("Det is %d\n", bestData[i]->det);
+        putchar('\n');
+    } 
+    printf("Worst average time is: %.12lf and worst diviation: %.12lf\nAnd data is:\n", worstTime.avarage, worstTime.deviation);
+    for (int i = 0; i < wsize; ++i) {
+        Matrix_printf(worstData[i]);
+        Matrix_delete(worstData[i]);
+        putchar('\n');
+        printf("Det is %d\n", worstData[i]->det);
+        putchar('\n');
+    }
+    free(worstData);
+    free(bestData);
 }
 
 int main() {
+    
     Matrix **m;
     FILE *in, *out;
     int n, matrSize, flag = 0;
 
     /*Input*/
-    in = fopen("input.txt", "r");
+ /*   in = fopen("input.txt", "r");
     if (in == NULL) {
         printf("Error: No such file as input.txt.");
         return 1;
@@ -165,10 +287,10 @@ int main() {
     }
 
     /*Sorting array of matrices.*/
-    Matrix_qSort(m, 0, n - 1);
+ //   Matrix_qSort(m, 0, n - 1);
 
     /*Output*/
-    out = fopen("output.txt", "w+");
+ /*   out = fopen("output.txt", "w+");
     if (out == NULL) {
         printf("Error: No such file as output.txt.");
         return 1;
@@ -179,6 +301,12 @@ int main() {
         Matrix_delete(m[mat]);
     }
     free(m);
-    
+    */
+    char type;
+    printf("Type 0 if you want to test a bubleSort or 1 if quickSort.\n");
+    scanf("%d", &type);
+   // srand(time(NULL));
+    testSys(type);
+
     return 0;
 }
