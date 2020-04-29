@@ -27,7 +27,7 @@ int Node_empty(Node *root) {
 }
 
 void print(Node *root) {
-    if (!root) {
+    if (root == NIL) {
         printf("x");
         return;
     }
@@ -64,59 +64,59 @@ Node *Node_make(nodeColor color, char *word, Node *parent, Node *left, Node *rig
     return NULL;
 }
 
-void Node_rightRotate(Node *x) {
+void Node_rightRotate(Node **root, Node *newNode) {
 
 }
 
-void Node_leftRotate(Node *x) {
+void Node_leftRotate(Node **root, Node *newNode) {
 
 }
 
-/*Re-balancing RBT root*/
-void Node_fixInsertion(Node *root, Node *x) {
+/*Re-balancing RBT root with new node newNode. */
+void Node_fixInsertion(Node **root, Node *newNode) {
     /*While we have a violation*/
-    while (x != root && x->parent->color == RED) {
-        if (x->parent == x->parent->parent->right) {
-            Node *uncle = x->parent->parent->left;
+    while (newNode != *root && newNode->parent->color == RED) {
+        if (newNode->parent == newNode->parent->parent->right) {
+            Node *uncle = newNode->parent->parent->left;
             if (uncle->color == RED) {
                 /*Uncle is RED*/
-                x->parent->color = BLACK;
+                newNode->parent->color = BLACK;
                 uncle->color = BLACK;
-                x = x->parent->parent;
+                newNode = newNode->parent->parent;
             } else {
                 /*Uncle id BLACK*/
-                if (x == x->parent->right) {
-                    /* Make x a left child */
-                    x = x->parent;
-                    Node_leftRotate(x);
+                if (newNode == newNode->parent->right) {
+                    /* Make newNode a left child */
+                    newNode = newNode->parent;
+                    Node_leftRotate(root, newNode);
                 }
-                x->parent->color = BLACK;
-                x->parent->parent->color = RED;
-                Node_rightRotate(x->parent->parent);
+                newNode->parent->color = BLACK;
+                newNode->parent->parent->color = RED;
+                Node_rightRotate(root, newNode->parent->parent);
             }
         } else {
             /*Mirror situation*/
-            Node *uncle = x->parent->parent->right;
+            Node *uncle = newNode->parent->parent->right;
             if (uncle->color == RED) {
                 /* uncle is RED */
-                x->parent->color = BLACK;
+                newNode->parent->color = BLACK;
                 uncle->color = BLACK;
-                x->parent->parent->color = RED;
-                x = x->parent->parent;
+                newNode->parent->parent->color = RED;
+                newNode = newNode->parent->parent;
             } else {
                 /*Uncle is BLACK*/
-                if (x == x->parent->left) {
-                    /*Make x a right child*/
-                    x = x->parent;
-                    Node_rightRotate(x);
+                if (newNode == newNode->parent->left) {
+                    /*Make newNode a right child*/
+                    newNode = newNode->parent;
+                    Node_rightRotate(root, newNode);
                 }
-                x->parent->color = BLACK;
-                x->parent->parent->color = RED;
-                Node_leftRotate(x->parent->parent);
+                newNode->parent->color = BLACK;
+                newNode->parent->parent->color = RED;
+                Node_leftRotate(root, newNode->parent->parent);
             }
         }
     }
-    root->color = BLACK;
+    (*root)->color = BLACK;
 }
 
 Node *Node_findParent(Node *root, Node *node) {
@@ -136,29 +136,7 @@ Node *Node_findParent(Node *root, Node *node) {
     return _compLT(root->word, node->word) ? Node_find(root->right, node->word) : Node_find(root->left, node->word);
 }
 
-/*Adds node newNode to BST root.*/
-/*Node *Node_addNodeToBST(Node **root, Node *newNode) {
-    if (*root == NULL) {    //found a place for newNode
-        *root = newNode;
-        //(*root)->parent = Node_findParent(*root, newNode->word);
-        return *root;
-    }
-    if _compEQ((*root)->word, newNode->word) return *root; //This word is already in the tree
-    Node **newNodePtr = _compLT((*root)->word, newNode->word) ? &((*root)->right) : &((*root)->left);
-    //(*newNodePtr)->parent = &(*root);
-
-    return Node_addNodeToBST(newNodePtr, newNode);  //keep searching place for newNode
-}*/
-
-/*Inserts 'key' in Red-black tree 'root' and balanses it*/
-/*Node *Node_insert(Node **root, char *key) {
-    Node *newNode = Node_make(RED, key, NULL, NULL, NULL);
-    Node_addNodeToBST(root, newNode);
-    newNode->parent = Node_findParent(*root, newNode);
-    //Node_fixInsertion(root, newNode);
-    return *root;
-}*/
-
+/*  Ads node with key-word 'word' and adds it to BST.   */
 void Node_insert(Node **root, char *word) {
     Node *current = *root;
     Node *parent = NULL;
@@ -178,7 +156,7 @@ void Node_insert(Node **root, char *word) {
         exit(1);
     }
     if (parent) {
-        if _compLT(current->word, word)
+        if _compLT(parent->word, word)
             parent->right = newNode;
         else
             parent->left = newNode;
@@ -194,7 +172,7 @@ Node *Node_findMinNode(Node *root) {
     return Node_findMinNode(root->left);
 }
 
-void Node_fixRemove(Node *root, Node *x) {
+void Node_fixRemove(Node *root, Node *newNode) {
     
 }
 
@@ -224,15 +202,14 @@ int main() {
         printf("Input: %s\t", line_buf);
         Node_insert(&root, line_buf);
         printf("Root: %s\t", root->word);
-        printf("Node: %s\n", Node_find(root, line_buf)->word);
+        printf("Node: %s\t", Node_find(root, line_buf)->word);
+        printf("Node color: %d\n", Node_find(root, line_buf)->color);
         //if (Node_find(root, line_buf))
         fscanf(in, "%s", line_buf);
     }
     fscanf(in, "%s", line_buf);
     print(root);
-    Node *par = Node_find(root, "omelet");
     
-    printf("\nNode: omelet\t Parent: %s\n", par->parent->word);
     /*while (strcmp(line_buf, "LEVEL:") != 0 && !feof(in)) {
         printf("Del: %s\t", line_buf);
         root = Node_delete(root, line_buf);

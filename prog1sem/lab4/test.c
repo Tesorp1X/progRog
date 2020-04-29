@@ -4,8 +4,8 @@
 #include <string.h>
 /* Shortcut for conditions */
 /*Use int strcmp (const char *str1, const char *str2); to compare strings.*/
-#define _compLT(x, y) (strcmp(x, y) < 0)      //compare x Less Then y
-#define _compEQ(x, y) (strcmp(x, y) == 0)     //compare x equal y
+#define _compLT(newNode, y) (strcmp(newNode, y) < 0)      //compare newNode Less Then y
+#define _compEQ(newNode, y) (strcmp(newNode, y) == 0)     //compare newNode equal y
 
 typedef enum { BLACK, RED } nodeColor;
 
@@ -25,7 +25,7 @@ int Node_empty(Node *root) {
 
 void print(Node *root) {
     if (!root) {
-        printf("x");
+        printf("newNode");
         return;
     }
     printf("(%s", root->word);
@@ -61,55 +61,55 @@ Node *Node_make(nodeColor color, char *word, Node *parent, Node *left, Node *rig
     return NULL;
 }
 
-void Node_rightRotate(Node *x) {
+void Node_rightRotate(Node *newNode) {
 
 }
 
-void Node_leftRotate(Node *x) {
+void Node_leftRotate(Node *newNode) {
 
 }
 
 /*Re-balancing RBT root*/
-void Node_fixInsertion(Node *root, Node *x) {
+void Node_fixInsertion(Node *root, Node *newNode) {
     /*While we have a violation*/
-    while (x != root && x->parent->color == RED) {
-        if (x->parent == x->parent->parent->right) {
-            Node *uncle = x->parent->parent->left;
+    while (newNode != root && newNode->parent->color == RED) {
+        if (newNode->parent == newNode->parent->parent->right) {
+            Node *uncle = newNode->parent->parent->left;
             if (uncle->color == RED) {
                 /*Uncle is RED*/
-                x->parent->color = BLACK;
+                newNode->parent->color = BLACK;
                 uncle->color = BLACK;
-                x = x->parent->parent;
+                newNode = newNode->parent->parent;
             } else {
                 /*Uncle id BLACK*/
-                if (x == x->parent->right) {
-                    /* Make x a left child */
-                    x = x->parent;
-                    Node_leftRotate(x);
+                if (newNode == newNode->parent->right) {
+                    /* Make newNode a left child */
+                    newNode = newNode->parent;
+                    Node_leftRotate(newNode);
                 }
-                x->parent->color = BLACK;
-                x->parent->parent->color = RED;
-                Node_rightRotate(x->parent->parent);
+                newNode->parent->color = BLACK;
+                newNode->parent->parent->color = RED;
+                Node_rightRotate(newNode->parent->parent);
             }
         } else {
             /*Mirror situation*/
-            Node *uncle = x->parent->parent->right;
+            Node *uncle = newNode->parent->parent->right;
             if (uncle->color == RED) {
                 /* uncle is RED */
-                x->parent->color = BLACK;
+                newNode->parent->color = BLACK;
                 uncle->color = BLACK;
-                x->parent->parent->color = RED;
-                x = x->parent->parent;
+                newNode->parent->parent->color = RED;
+                newNode = newNode->parent->parent;
             } else {
                 /*Uncle is BLACK*/
-                if (x == x->parent->left) {
-                    /*Make x a right child*/
-                    x = x->parent;
-                    Node_rightRotate(x);
+                if (newNode == newNode->parent->left) {
+                    /*Make newNode a right child*/
+                    newNode = newNode->parent;
+                    Node_rightRotate(newNode);
                 }
-                x->parent->color = BLACK;
-                x->parent->parent->color = RED;
-                Node_leftRotate(x->parent->parent);
+                newNode->parent->color = BLACK;
+                newNode->parent->parent->color = RED;
+                Node_leftRotate(newNode->parent->parent);
             }
         }
     }
@@ -162,7 +162,7 @@ Node *Node_findMinNode(Node *root) {
     return Node_findMinNode(root->left);
 }
 
-void Node_fixRemove(Node *root, Node *x) {
+void Node_fixRemove(Node *root, Node *newNode) {
     
 }
 
