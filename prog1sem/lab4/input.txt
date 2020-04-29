@@ -1,0 +1,10 @@
+TEXT:
+eggs
+you can't make an omelet without breaking a few
+eggs
+DELETE:
+without
+you
+make
+LEVEL:
+2

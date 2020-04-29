@@ -2,11 +2,15 @@
 #include <ctype.h>
 #include <time.h>
 #include <stdlib.h>
+#define MAX_VALUE 10 //Max value for matrix elements
+#define MAX_ELEMENTS 15 //Max ammount of elements
+#define MAX_SIZE 10 //Max size of the matrix
+#define AMMOUNT_OF_EVALUATIONS 1000
+#define AMMOUNT_OF_DIFFERENT_DATA 2
 
 
 typedef struct Matrix {
     int size; // number of rows
-    int det; // number of columns
     int **data; // a pointer to an array of n_rows = size pointers to rows; a row is an array of n_row = size integers
 }Matrix;
 
@@ -17,7 +21,7 @@ void Matrix_swap(Matrix **a, Matrix **b) {
     *b = temp;
     temp = NULL;
 }
-
+void Matrix_printf(Matrix *m);
 
 Matrix *Matrix_make(int size) {
     Matrix *matrix = (Matrix *) malloc(sizeof(Matrix));
@@ -29,7 +33,6 @@ Matrix *Matrix_make(int size) {
         if (data == NULL) return NULL;
     }
     matrix->data = data;
-    matrix->det = 0;
     return matrix;
 }
 
@@ -40,18 +43,24 @@ Matrix *Matrix_delete(Matrix *m) {
     free(m);
 }
 
+Matrix *Matrix_copy(Matrix *dst, Matrix *src) {
+    int dsize = dst->size;
+    for (int i = 0; i < dsize; ++i)
+        for (int j = 0; j < dsize; ++j)
+            dst->data[i][j] = src->data[i][j];
+        printf("Matrix Copied!");
+    return dst;
+}
 
 int Matrix_det(Matrix *a) {
     char isPlus = 1;
     int det = 0;
-    if (a->size == 1) {
-        a->det = a->data[0][0];
-        return a->data[0][0];
-    }
-    for (int i = 0; i < a->size; ++i) {
-        Matrix *m = Matrix_make(a->size - 1);
-        for (int j = 0; j < m->size; ++j)
-            for (int k = 0; k < m->size; ++k)
+    int size = a->size;
+    if (size == 1) return a->data[0][0];
+    for (int i = 0; i < size; ++i) {
+        Matrix *m = Matrix_make(size - 1);
+        for (int j = 0; j < size - 1; ++j)
+            for (int k = 0; k < size - 1; ++k)
                 if (k < i)
                     m->data[j][k] = a->data[j + 1][k];
                 else m->data[j][k] = a->data[j + 1][k + 1];
@@ -66,86 +75,48 @@ int Matrix_det(Matrix *a) {
         }
         Matrix_delete(m);
     }
-    a->det = det;
     return det;
 }
 
-/*Sorts m by raising determinant value. m - array of matrices */
-void Matrix_qSort(Matrix **m, int first, int last) {
-    srand(time(NULL));
-    int pivot = m[first + rand() % (last - first)]->det;
-    printf("Pivot is %d\n", pivot);
-    int left = first, right = last;
-    while (left < right) {
-        while (m[left]->det < pivot)
-            left++;
-        while (m[right]->det > pivot)
-            right--;
-        if (left <= right)
-            Matrix_swap(&m[left++], &m[right--]);
-    }
-    /*Recursive callouts for both left and right parts if array contains more than 1 element.*/
-    if (first < right) Matrix_qSort(m, first, right);
-    if (left < last) Matrix_qSort(m, left, last);
+
+void swap(int *a, int *b) {
+    int temp = *a;
+    *a = *b;
+    *b = temp;
 }
 
-
-void Matrix_fscanf(FILE *in, Matrix *m) {
-    for (int i = 0; i < m->size; ++i)
-        for (int j = 0; j < m->size; ++j)
-            fscanf(in, "%d", &(m)->data[i][j]);
+Matrix *Matrix_random() {
+    
+    size_t size = 1 + rand() % MAX_SIZE; 
+    Matrix *m = Matrix_make(size);
+    for (int i = 0; i < size; ++i)
+        for (int j = 0; j < size; ++j)
+            m->data[i][j] = rand() % MAX_VALUE; // generating "random" number between 0 and MAX_VALUE - 1
+    
+    return m;
 }
 
-
-void Matrix_fprintf(FILE *out, Matrix *m) {
-    for (int i = 0; i < m->size; ++i) {
-        for (int j = 0; j < m->size; ++j)
-            fprintf(out, "%d ", m->data[i][j]);
-        if (i < m->size - 1) fprintf(out, "\n");
+void Matrix_printf(Matrix *m) {
+    int size = m->size;
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j)
+            printf("%d ", m->data[i][j]);
+        if (i < size - 1) printf("\n");
     }
 }
 
 
 int main() {
-    Matrix **m;
-    FILE *in, *out;
-    int n, matrSize, flag = 0;
-
-    /*Input*/
-    in = fopen("input.txt", "r");
-    fscanf(in, "%d", &n);
-    m = (Matrix **) malloc(n * sizeof(Matrix **));
-    if (m == NULL) {
-        printf("Error: allocation failed.");
-        return 1;
+    srand(time(NULL));
+    int n = 1 + rand() % MAX_ELEMENTS; 
+    Matrix **array = (Matrix **) malloc(n * sizeof(Matrix *));
+    for (int i = 0; i < n; ++i) {
+        array[i] = Matrix_random();
+        Matrix_det(array[i]);
+        Matrix_printf(array[i]);
+        putchar('\n');
+        putchar('\n');
     }
-
-    for (int mat = 0; mat < n; ++mat) {
-        fscanf(in, "%d", &matrSize);
-        m[mat] = Matrix_make(matrSize);
-        if (m == NULL) {
-            printf("Error: allocation failed.");
-            return 1;
-        }
-        Matrix_fscanf(in, m[mat]);       
-        flag++;
-        Matrix_det(m[mat]);
-    }
-    
-    /*Output*/
-    out = fopen("output.txt", "w+");
-    /*for (int mat = 0; mat < n; ++mat) {
-        fprintf(out, "%d\t", m[mat]->det);
-    }
-    fprintf(out, "\n");*/
-    Matrix_qSort(m, 0, n - 1);
-    for (int mat = 0; mat < n; ++mat) {
-        Matrix_fprintf(out, m[mat]);
-        //fprintf(out, "%d\t", m[mat]->det);
-        if (mat < n - 1) fprintf(out, "\n");
-        Matrix_delete(m[mat]);
-    }
-    free(m);
     
     return 0;
 }

@@ -3,14 +3,15 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+void print_arr(int *a, int n) {
+    for (int i = 0; i < n; ++i)
+        printf("%d\t", a[i]);
+}
+
 void swap(int *a, int *b) {
     int temp = *a;
     *a = *b;
     *b = temp;
-}
-void print_arr(int *a, int n) {
-    for (int i = 0; i < n; ++i)
-        printf("%d\t", a[i]);
 }
 
 void qSort(int *a, int first, int last) {
@@ -25,9 +26,21 @@ void qSort(int *a, int first, int last) {
     if (first < r) qSort(a, first, r);
     if (l < last) qSort(a, l, last);
 }
+/*
+int partition(int *a, int first, int last) {
 
+}
+
+void hSort(int *a, int first, int last) {
+    if (first < last) {
+        int p = patrition(a, first, last);
+        hsort(a, first, p - 1);
+        hsort(a, p + 1, last);
+    }
+}
+*/
 int main() {
-    int a[8] = {4, 5, 1, -9, 6, 10, -1, -2};
+    int a[] = {8, 8, 8, 8, 8, 8, 8, 8};
     print_arr(a, 8);
     putchar('\n');
     qSort(a, 0, 7);

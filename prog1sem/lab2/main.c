@@ -264,7 +264,6 @@ int main() {
         printf("ERROR: No such file as output.txt .");
         return 1;
     }
-    fscanf(in, "%s", pattern);
     fscanf(in, "%d", &n);
 
     for (int i = 0; i < n; ++i) {
