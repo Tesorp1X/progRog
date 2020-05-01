@@ -2,10 +2,12 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 /* Shortcut for conditions */
 /*Use int strcmp (const char *str1, const char *str2); to compare strings.*/
 #define _compLT(x, y) (strcmp(x, y) < 0)      //compare x Less Then y
 #define _compEQ(x, y) (strcmp(x, y) == 0)     //compare x equal y
+#define CHUNK_SIZE 16
 
 typedef enum { BLACK, RED } nodeColor;
 
@@ -26,6 +28,24 @@ int Node_empty(Node *root) {
     return root == NULL;
 }
 
+char *readWord(FILE *in) {
+    int allocated = 0;
+    int used = 1;
+    char *p = NULL; char c;
+    while ((c = fgetc(in)) != EOF) {
+        if (c == ' ' || c == '\n' || c == '\t') break;
+        if (allocated <= used) {
+            char *q = realloc(p, sizeof(char) * (allocated + CHUNK_SIZE));
+            if (!q) break;
+            p = q; 
+            allocated += CHUNK_SIZE;
+        }
+        p[used - 1] = c; used++;
+    }
+    if (p) p[used - 1] = 0;
+    return p;
+}
+
 void print(Node *root) {
     if (root == NIL) {
         printf("x");
@@ -38,8 +58,8 @@ void print(Node *root) {
 }
 
 Node *Node_find(Node *root, char *word) {
-    if (!root) {
-        return NULL;
+    if (root == NIL) {
+        return NIL;
     }
     if _compEQ(root->word, word) {
         return root;
@@ -48,20 +68,29 @@ Node *Node_find(Node *root, char *word) {
     return _compLT(root->word, word) ? Node_find(root->right, word) : Node_find(root->left, word);
 }
 
-
+void Node_fprintLevel(FILE *out, Node *node, int level) {
+    if (level == 0)
+        if (node){
+            fprintf(out, "%s ", node->word);
+            return;
+        }
+    Node_fprintLevel(out, node->left, level - 1);
+    Node_fprintLevel(out, node->right, level - 1);
+}
 
 /*Creates a new Node*/
 Node *Node_make(nodeColor color, char *word, Node *parent, Node *left, Node *right) {
     Node *temp = (Node *) malloc(sizeof(Node));
-    if (temp) {
-        temp->color = color;
-        strcpy(temp->word, word);
-        temp->parent = parent;
-        temp->left = left;
-        temp->right = right;
-        return temp;
+    if (!temp) {
+        printf("ERROR: Allocation failed.\n");
+        exit(1);
     }
-    return NULL;
+    temp->color = color;
+    strcpy(temp->word, word);
+    temp->parent = parent;
+    temp->left = left;
+    temp->right = right;
+    return temp;
 }
 
 void Node_rightRotate(Node **root, Node *x) {
@@ -105,16 +134,19 @@ void Node_leftRotate(Node **root, Node *x) {
 
 /*Re-balancing RBT root with new node newNode. */
 void Node_fixInsertion(Node **root, Node *newNode) {
+    Node *grandParent;   //grandparent of newNode
     /*While we have a violation*/
     while (newNode != *root && newNode->parent->color == RED) {
-        if (newNode->parent == newNode->parent->parent->left) {
-            Node *uncle = newNode->parent->parent->right;
+        grandParent = newNode->parent->parent;
+        assert(grandParent != NIL);
+        if (newNode->parent == grandParent->left) {
+            Node *uncle = grandParent->right;
             if (uncle->color == RED) {
                 /*Uncle is RED*/
                 newNode->parent->color = BLACK;
                 uncle->color = BLACK;
-                newNode->parent->parent->color = RED;
-                newNode = newNode->parent->parent;
+                grandParent->color = RED;
+                newNode = grandParent;
             } else {
                 /*Uncle id BLACK*/
                 if (newNode == newNode->parent->right) {
@@ -123,18 +155,18 @@ void Node_fixInsertion(Node **root, Node *newNode) {
                     Node_leftRotate(root, newNode);
                 }
                 newNode->parent->color = BLACK;
-                newNode->parent->parent->color = RED;
-                Node_rightRotate(root, newNode->parent->parent);
+                grandParent->color = RED;
+                Node_rightRotate(root, grandParent);
             }
         } else {
             /*Mirror situation*/
-            Node *uncle = newNode->parent->parent->left;
+            Node *uncle = grandParent->left;
             if (uncle->color == RED) {
                 /* uncle is RED */
                 newNode->parent->color = BLACK;
                 uncle->color = BLACK;
-                newNode->parent->parent->color = RED;
-                newNode = newNode->parent->parent;
+                grandParent->color = RED;
+                newNode = grandParent;
             } else {
                 /*Uncle is BLACK*/
                 if (newNode == newNode->parent->left) {
@@ -143,8 +175,8 @@ void Node_fixInsertion(Node **root, Node *newNode) {
                     Node_rightRotate(root, newNode);
                 }
                 newNode->parent->color = BLACK;
-                newNode->parent->parent->color = RED;
-                Node_leftRotate(root, newNode->parent->parent);
+                grandParent->color = RED;
+                Node_leftRotate(root, grandParent);
             }
         }
     }
@@ -161,15 +193,8 @@ void Node_insert(Node **root, char *word) {
         parent = current;
         current = _compLT(current->word, word) ? current->right : current->left;
     }
-    //Node *newNode = Node_make(RED, word, parent, NIL, NIL);
-    Node *newNode = (Node *) malloc(sizeof(Node));
-    newNode->color = RED; newNode->left = NIL;
-    newNode->right = NIL; newNode->parent = parent;
-    strcpy(newNode->word, word);
-    if (!newNode) {
-        printf("ERROR : Node allocation error.\n");
-        exit(1);
-    }
+    Node *newNode = Node_make(RED, word, parent, NIL, NIL);
+    
     if (parent) {
         if _compLT(parent->word, word)
             parent->right = newNode;
@@ -183,53 +208,182 @@ void Node_insert(Node **root, char *word) {
 }
 
 Node *Node_findMinNode(Node *root) {
-    if (root->left == NULL) return root;
+    if (root->left == NIL) return root;
     return Node_findMinNode(root->left);
 }
 
-void Node_fixRemove(Node *root, Node *newNode) {
-    
+void Node_transplant(Node **root, Node *u, Node *v){
+	if(u->parent == NIL){
+		*root = v;
+	}
+	else if(u == u->parent->left){
+		u->parent->left = v;
+	}
+	else{
+		u->parent->right = v;
+	}
+
+	v->parent = u->parent;
 }
 
-Node *Node_deleteNodeFromBST(Node **root, Node *node) {
+void Node_deleteFixup(Node **root, Node *x){
+	Node *sibling;	
 
+	while (x != *root && x->color == BLACK){
+		
+		if (x == x->parent->left){
+			sibling = x->parent->right;
+
+			if(sibling->color == RED){
+				sibling->color = BLACK;
+				x->parent->color = RED;
+				Node_leftRotate(root, x->parent);
+				sibling = x->parent->right;
+			}
+
+			if(sibling->left->color == BLACK && sibling->right->color == BLACK){
+				sibling->color = RED;
+				x->parent->color = BLACK;
+				x = x->parent;
+			}
+			else{
+
+				if(sibling->right->color == BLACK){
+					sibling->color = RED;
+					sibling->left->color = BLACK;
+					Node_leftRotate(root, sibling);
+					sibling = x->parent->right;
+				}
+
+				sibling->color = x->parent->color;
+				x->parent->color = BLACK;
+				x->right->color = BLACK;
+				Node_leftRotate(root, x->parent);
+				x = *root;
+			}
+
+		}
+		else{
+			sibling = x->parent->left;
+
+			if(sibling->color == RED){
+				sibling->color = BLACK;
+				x->parent->color = BLACK;
+				Node_rightRotate(root, x->parent);
+				sibling = x->parent->left;
+			}
+
+			if(sibling->left->color == BLACK && sibling->right->color == BLACK){
+				sibling->color = RED;
+				x->parent->color = BLACK;
+				x = x->parent;
+			}
+			else{
+
+				if(sibling->left->color == BLACK){
+					sibling->color = RED;
+					sibling->right->color = BLACK;
+					Node_leftRotate(root, sibling);
+					sibling = x->parent->left;
+				}
+
+				sibling->color = x->parent->color;
+				x->parent->color = BLACK;
+				sibling->left->color = BLACK;
+				Node_rightRotate(root, x->parent);
+				x = *root;
+
+			}
+		}
+
+	}
+
+	x->color = BLACK;
 }
-/*  Finds adn removes a node with key word, also keeping the balace in the BST. */
-Node *Node_remove(Node **root, char *word) {
-    Node *current = Node_find(*root, word);
 
+void Node_delete(Node **root, char *word){
+    Node *node = Node_find(*root, word);
+	Node *x, *y;
+
+    if (node == NIL) return;
+
+
+    if (node->left == NIL || node->right == NIL) {
+        /* y has a NIL node as a child */
+        y = node;
+    } else {
+        /* find tree successor with a NIL node as a child */
+        y = node->right;
+        while (y->left != NIL) y = y->left;
+    }
+
+    if (y->left != NIL)
+        x = y->left;
+    else
+        x = y->right;
+
+    /* remove y from the parent chain */
+    x->parent = y->parent;
+    if (y->parent)
+        if (y == y->parent->left)
+            y->parent->left = x;
+        else
+            y->parent->right = x;
+    else
+        *root = x;
+
+    if (y != node) strcpy(node->word, y->word);
+
+
+    if (y->color == BLACK)
+        Node_deleteFixup(root, x);
+
+    free (y);
+}
+
+void Node_free(Node *root) {
+    if (root == NIL) return;
+    Node_free(root->left);
+    Node_free(root->right);
+    free(root);
 }
 
 int main() {
     Node *root = NIL;
     FILE *in, *out;
     in = fopen("input.txt", "r");
-    char line_buf[255];
+    char *line_buf;
+    char line[10];
     int level;
 
     if (!in) {
         printf("ERROR : No such file as input. txt.");
         exit(1);
     }
-    fscanf(in, "%s", line_buf); //skiping "TEXT:"
-    fscanf(in, "%s", line_buf);
-    while (!_compEQ(line_buf, "DELETE:") && !feof(in)) {
-        printf("Input: %s\t", line_buf);
+    fscanf(in, "%s", line); //skiping "TEXT:"
+    fgetc(in);
+    line_buf = readWord(in);
+    while (!_compEQ(line_buf, "DELETE:")) {
         Node_insert(&root, line_buf);
-        printf("Root: %s\n", root->word);
-        //printf("Node: %s\n", Node_find(root, line_buf)->word);
-       // printf("Node color: %d\n", Node_find(root, line_buf)->color);
-        //if (Node_find(root, line_buf))
-        fscanf(in, "%s", line_buf);
+        free(line_buf);
+        line_buf = readWord(in);
     }
-    fscanf(in, "%s", line_buf);
     print(root);
-    
-    /*while (strcmp(line_buf, "LEVEL:") != 0 && !feof(in)) {
-        printf("Del: %s\t", line_buf);
-        root = Node_delete(root, line_buf);
-        fscanf(in, "%s", line_buf);
+    putchar('\n');
+    line_buf = readWord(in);
+    while (strcmp(line_buf, "LEVEL:") != 0) {
+        Node_delete(&root, line_buf);
+        free(line_buf);
+        line_buf = readWord(in);
     }
-    */
+    fscanf(in, "%d", &level);
+    fclose(in);
+    out = fopen("output.txt", "w+");
+    Node_fprintLevel(out, root, level);
+    print(root);
+    Node_free(root);
+    fclose(out);
+
+    
     return 0;
 }
