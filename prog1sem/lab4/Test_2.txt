@@ -1,0 +1,17 @@
+INPUT:
+----------
+TEXT:
+A redblack tree is a kind of selfbalancing
+binary search tree in computer science
+DELETE:
+kind
+search
+LEVEL:
+2
+--------
+OUTPUT:
+--------
+A in science tree
+----------
+TREE:
+(of(a(Axx)(in(binaryx(computerxx))(isxx)))(selfbalancing(science(redblackxx)x)(treexx)))

@@ -13,31 +13,31 @@ typedef enum { BLACK, RED } nodeColor;
 
 
 /*Red-black tree for c-string type*/
-typedef struct Node_{
-    struct Node_ *parent;
-    struct Node_ *left;     //left child
-    struct Node_ *right;    //right child
+typedef struct Node_ {
+    struct Node_* parent;
+    struct Node_* left;     //left child
+    struct Node_* right;    //right child
     nodeColor color;        //BLACK or RED node color
-    char word[255];         //c-string
+    char *word;         //c-string
 }Node;
 
 #define NIL &leaf          
 Node leaf = { NULL, NIL, NIL, BLACK, 0 };
 
-int Node_empty(Node *root) {
+int Node_empty(Node* root) {
     return root == NULL;
 }
 
-char *readWord(FILE *in) {
+char* readWord(FILE* in) {
     int allocated = 0;
     int used = 1;
-    char *p = NULL; char c;
+    char* p = NULL; char c;
     while ((c = fgetc(in)) != EOF) {
         if (c == ' ' || c == '\n' || c == '\t') break;
         if (allocated <= used) {
-            char *q = realloc(p, sizeof(char) * (allocated + CHUNK_SIZE));
+            char* q = realloc(p, sizeof(char) * (allocated + CHUNK_SIZE));
             if (!q) break;
-            p = q; 
+            p = q;
             allocated += CHUNK_SIZE;
         }
         p[used - 1] = c; used++;
@@ -46,7 +46,7 @@ char *readWord(FILE *in) {
     return p;
 }
 
-void print(Node *root) {
+void print(Node* root) {
     if (root == NIL) {
         printf("x");
         return;
@@ -57,7 +57,7 @@ void print(Node *root) {
     printf(")");
 }
 
-Node *Node_find(Node *root, char *word) {
+Node* Node_find(Node* root, char* word) {
     if (root == NIL) {
         return NIL;
     }
@@ -68,9 +68,9 @@ Node *Node_find(Node *root, char *word) {
     return _compLT(root->word, word) ? Node_find(root->right, word) : Node_find(root->left, word);
 }
 
-void Node_fprintLevel(FILE *out, Node *node, int level) {
+void Node_fprintLevel(FILE* out, Node* node, int level) {
     if (level == 0)
-        if (node){
+        if (node) {
             fprintf(out, "%s ", node->word);
             return;
         }
@@ -79,13 +79,18 @@ void Node_fprintLevel(FILE *out, Node *node, int level) {
 }
 
 /*Creates a new Node*/
-Node *Node_make(nodeColor color, char *word, Node *parent, Node *left, Node *right) {
-    Node *temp = (Node *) malloc(sizeof(Node));
+Node* Node_make(nodeColor color, char* word, Node* parent, Node* left, Node* right) {
+    Node* temp = (Node*)malloc(sizeof(Node));
     if (!temp) {
         printf("ERROR: Allocation failed.\n");
         exit(1);
     }
     temp->color = color;
+    temp->word = (char *) malloc(sizeof(char) * (strlen(word) + 1));
+    if (!temp->word) {
+        printf("ERROR: Allocation failed.\n");
+        exit(1);
+    }
     strcpy(temp->word, word);
     temp->parent = parent;
     temp->left = left;
@@ -93,61 +98,74 @@ Node *Node_make(nodeColor color, char *word, Node *parent, Node *left, Node *rig
     return temp;
 }
 
-void Node_rightRotate(Node **root, Node *x) {
-    Node *y = x->left;
-
+void Node_rightRotate(Node** root, Node* x) {
+    /* Make y's right child x's left child */
+    Node* y = x->left;
+    /* establish x->left link */
     x->left = y->right;
     if (y->right != NIL) y->right->parent = x;
+
+    /* establish y->parent link */
+    if (y != NIL) y->parent = x->parent;
     if (x->parent) {
         if (x == x->parent->right)
             x->parent->right = y;
-        else 
+        else
             x->parent->left = y;
-    } else 
+    }
+    else {
         *root = y;
+    }
 
+    /* link x and y */
     y->right = x;
-    if (x != NIL)
-        x->parent = y;
+    if (x != NIL) x->parent = y;
 }
 
-void Node_leftRotate(Node **root, Node *x) {
-    Node *y = x->right;
+void Node_leftRotate(Node** root, Node* x) {
+    /* Make y's left child x's right child */
+    Node* y = x->right;
 
+    /* establish x->right link */
     x->right = y->left;
     if (y->left != NIL) y->left->parent = x;
 
+    /* establish y->parent link */
     if (y != NIL) y->parent = x->parent;
     if (x->parent) {
         if (x == x->parent->left)
             x->parent->left = y;
         else
             x->parent->right = y;
-    } else 
+    }
+    else {
         *root = y;
+    }
 
+    /* link x and y */
     y->left = x;
     if (x != NIL) x->parent = y;
-        
+
 }
 
 
 /*Re-balancing RBT root with new node newNode. */
-void Node_fixInsertion(Node **root, Node *newNode) {
-    Node *grandParent;   //grandparent of newNode
+void Node_fixInsertion(Node** root, Node* newNode) {
+    Node* grandParent;   //grandparent of newNode
     /*While we have a violation*/
     while (newNode != *root && newNode->parent->color == RED) {
         grandParent = newNode->parent->parent;
         assert(grandParent != NIL);
         if (newNode->parent == grandParent->left) {
-            Node *uncle = grandParent->right;
+            Node* uncle = grandParent->right;
             if (uncle->color == RED) {
                 /*Uncle is RED*/
                 newNode->parent->color = BLACK;
                 uncle->color = BLACK;
                 grandParent->color = RED;
                 newNode = grandParent;
-            } else {
+            }
+            else {
                 /*Uncle id BLACK*/
                 if (newNode == newNode->parent->right) {
                     /* Make newNode a left child */
@@ -158,16 +176,18 @@ void Node_fixInsertion(Node **root, Node *newNode) {
                 grandParent->color = RED;
                 Node_rightRotate(root, grandParent);
             }
-        } else {
+        }
+        else {
             /*Mirror situation*/
-            Node *uncle = grandParent->left;
+            Node* uncle = grandParent->left;
             if (uncle->color == RED) {
                 /* uncle is RED */
                 newNode->parent->color = BLACK;
                 uncle->color = BLACK;
                 grandParent->color = RED;
                 newNode = grandParent;
-            } else {
+            }
+            else {
                 /*Uncle is BLACK*/
                 if (newNode == newNode->parent->left) {
                     /*Make newNode a right child*/
@@ -184,137 +204,128 @@ void Node_fixInsertion(Node **root, Node *newNode) {
 }
 
 /*  Ads node with key-word 'word' and adds it to BST.   */
-void Node_insert(Node **root, char *word) {
-    Node *current = *root;
-    Node *parent = NULL;
+void Node_insert(Node** root, char* word) {
+    Node* current = *root;
+    Node* parent = NULL;
     while (current != NIL) {
         if _compEQ(word, current->word) //word is already in BST and we do nothing
             return;
         parent = current;
         current = _compLT(current->word, word) ? current->right : current->left;
     }
-    Node *newNode = Node_make(RED, word, parent, NIL, NIL);
-    
+    Node* newNode = Node_make(RED, word, parent, NIL, NIL);
+
     if (parent) {
         if _compLT(parent->word, word)
             parent->right = newNode;
         else
             parent->left = newNode;
-    } else
+    }
+    else
         *root = newNode;
-    
+
     Node_fixInsertion(root, newNode);
 
 }
 
-Node *Node_findMinNode(Node *root) {
+Node* Node_findMinNode(Node* root) {
     if (root->left == NIL) return root;
     return Node_findMinNode(root->left);
 }
 
-void Node_transplant(Node **root, Node *u, Node *v){
-	if(u->parent == NIL){
-		*root = v;
-	}
-	else if(u == u->parent->left){
-		u->parent->left = v;
-	}
-	else{
-		u->parent->right = v;
-	}
+void Node_transplant(Node** root, Node* u, Node* v) {
+    if (u->parent == NIL)
+        *root = v;
+    else if (u == u->parent->left)
+        u->parent->left = v;
+    else
+        u->parent->right = v;
 
-	v->parent = u->parent;
+    v->parent = u->parent;
 }
 
-void Node_deleteFixup(Node **root, Node *x){
-	Node *sibling;	
+void Node_deleteFixup(Node** root, Node* x) {
 
-	while (x != *root && x->color == BLACK){
-		
-		if (x == x->parent->left){
-			sibling = x->parent->right;
+    while (x != *root && x->color == BLACK) {
 
-			if(sibling->color == RED){
-				sibling->color = BLACK;
-				x->parent->color = RED;
-				Node_leftRotate(root, x->parent);
-				sibling = x->parent->right;
-			}
+        if (x == x->parent->left) {
+            Node* sibling = x->parent->right;
+            if (sibling->color == RED) {
+                sibling->color = BLACK;
+                x->parent->color = RED;
+                Node_leftRotate(root, x->parent);
+                sibling = x->parent->right;
+            }
 
-			if(sibling->left->color == BLACK && sibling->right->color == BLACK){
-				sibling->color = RED;
-				x->parent->color = BLACK;
-				x = x->parent;
-			}
-			else{
+            if (sibling->left->color == BLACK && sibling->right->color == BLACK) {
+                sibling->color = RED;
+                x = x->parent;
+            }
+            else {
+                if (sibling->right->color == BLACK) {
+                    sibling->color = RED;
+                    sibling->left->color = BLACK;
+                    Node_rightRotate(root, sibling);
+                    sibling = x->parent->right;
+                }
 
-				if(sibling->right->color == BLACK){
-					sibling->color = RED;
-					sibling->left->color = BLACK;
-					Node_leftRotate(root, sibling);
-					sibling = x->parent->right;
-				}
+                sibling->color = x->parent->color;
+                x->parent->color = BLACK;
+                x->right->color = BLACK;
+                Node_leftRotate(root, x->parent);
+                x = *root;
+            }
 
-				sibling->color = x->parent->color;
-				x->parent->color = BLACK;
-				x->right->color = BLACK;
-				Node_leftRotate(root, x->parent);
-				x = *root;
-			}
+        } else {
+            Node* sibling = x->parent->left;
 
-		}
-		else{
-			sibling = x->parent->left;
+            if (sibling->color == RED) {
+                sibling->color = BLACK;
+                x->parent->color = RED;
+                Node_rightRotate(root, x->parent);
+                sibling = x->parent->left;
+            }
 
-			if(sibling->color == RED){
-				sibling->color = BLACK;
-				x->parent->color = BLACK;
-				Node_rightRotate(root, x->parent);
-				sibling = x->parent->left;
-			}
+            if (sibling->left->color == BLACK && sibling->right->color == BLACK) {
+                sibling->color = RED;
+                x->parent->color = BLACK;
+                x = x->parent;
+            } else {
+                if (sibling->left->color == BLACK) {
+                    sibling->color = RED;
+                    sibling->right->color = BLACK;
+                    Node_leftRotate(root, sibling);
+                    sibling = x->parent->left;
+                }
 
-			if(sibling->left->color == BLACK && sibling->right->color == BLACK){
-				sibling->color = RED;
-				x->parent->color = BLACK;
-				x = x->parent;
-			}
-			else{
+                sibling->color = x->parent->color;
+                x->parent->color = BLACK;
+                sibling->left->color = BLACK;
+                Node_rightRotate(root, x->parent);
+                x = *root;
 
-				if(sibling->left->color == BLACK){
-					sibling->color = RED;
-					sibling->right->color = BLACK;
-					Node_leftRotate(root, sibling);
-					sibling = x->parent->left;
-				}
+            }
+        }
 
-				sibling->color = x->parent->color;
-				x->parent->color = BLACK;
-				sibling->left->color = BLACK;
-				Node_rightRotate(root, x->parent);
-				x = *root;
+    }
 
-			}
-		}
-
-	}
-
-	x->color = BLACK;
+    x->color = BLACK;
 }
 
-void Node_delete(Node **root, char *word){
-    Node *node = Node_find(*root, word);
-	Node *x, *y;
+void Node_delete(Node** root, char* word) {
+    Node* node = Node_find(*root, word);
+    Node* x, * y;
 
-    if (node == NIL) return;
+    if (!node || node == NIL) return;
 
 
     if (node->left == NIL || node->right == NIL) {
         /* y has a NIL node as a child */
         y = node;
-    } else {
+    }
+    else {
         /* find tree successor with a NIL node as a child */
-        y = node->right;
-        while (y->left != NIL) y = y->left;
+        y = Node_findMinNode(node->right);
     }
 
     if (y->left != NIL)
@@ -338,10 +349,10 @@ void Node_delete(Node **root, char *word){
     if (y->color == BLACK)
         Node_deleteFixup(root, x);
 
-    free (y);
+    free(y);
 }
 
-void Node_free(Node *root) {
+void Node_free(Node* root) {
     if (root == NIL) return;
     Node_free(root->left);
     Node_free(root->right);
@@ -349,10 +360,10 @@ void Node_free(Node *root) {
 }
 
 int main() {
-    Node *root = NIL;
-    FILE *in, *out;
+    Node* root = NIL;
+    FILE* in, * out;
     in = fopen("input.txt", "r");
-    char *line_buf;
+    char* line_buf;
     char line[10];
     int level;
 
@@ -373,6 +384,8 @@ int main() {
     line_buf = readWord(in);
     while (strcmp(line_buf, "LEVEL:") != 0) {
         Node_delete(&root, line_buf);
+        print(root);
+        putchar('\n');
         free(line_buf);
         line_buf = readWord(in);
     }
@@ -384,6 +397,6 @@ int main() {
     Node_free(root);
     fclose(out);
 
-    
+
     return 0;
 }

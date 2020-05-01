@@ -1,0 +1,18 @@
+INPUT:
+------
+TEXT:
+A redblack tree is a special type of binary tree
+used in computer science
+DELETE:
+redblack
+type
+used
+LEVEL:
+2
+------
+OUTPUT:
+------
+A computer of tree 
+------
+TREE:
+(is(a(Axx)(computer(binaryxx)(inxx)))(science(ofxx)(tree(specialxx)x)))

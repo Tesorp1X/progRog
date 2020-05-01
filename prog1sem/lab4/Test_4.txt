@@ -1,0 +1,18 @@
+INPUT:
+------
+TEXT:
+a b c d e f g h j J
+DELETE:
+g
+z
+d
+c
+LEVEL:
+0
+------
+OUTPUT:
+------
+e
+------
+TREE:
+(e(a(Jxx)(bxx))(h(fxx)(jxx)))
