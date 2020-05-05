@@ -1,0 +1,6 @@
+jar cfe hw.jar henlo henlo.class        //archive
+jar tf hw.jar                           //what's inside
+jar xf hw.jar                           //unzip
+java -jar hw.jar                        //run from jar
+javac -classpath lib.jar henlo.java     //add lib for compiler
+java -classpath lib.jar;hw.jar henlo    //add lib for runtime
