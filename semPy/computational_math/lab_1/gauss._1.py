@@ -3,14 +3,19 @@
 
 # File inpur through input.txt #
 
-def read_matrix():
+def read_matrix(isInt=True):
 
     with open("input.txt") as file:
         n = int(file.readline())
         print("n = ", n)
-        matr = [[] for i in range(n)]
-        for i in range(n):
-            matr[i] = [int(t) for t in file.readline().split()]
+        if isInt:
+            matr = [[] for i in range(n)]
+            for i in range(n):
+                matr[i] = [int(t) for t in file.readline().split()]
+        else:
+            matr = file.readlines()
+            del matr[0]
+            matr = [[float(n) for n in x.split()] for x in matr]
     
 
     print("Got matrix:")
@@ -64,9 +69,24 @@ def solve_gauss(matr):
 
 
 if __name__ == "__main__":
+    attempt = 0
+    while attempt < 10:
+        is_int = input("Выбирете тип матрицы:\n1. Int\n2. float\n")
+        if is_int == '1':
+            is_int = True
+            break
+        elif is_int == '2':
+            is_int = False
+            break
+        else:
+            print("Error: wrong argument.")
+            attempt += 1
 
-    m = read_matrix()
+    if attempt != 0:
+        exit(1)
+
+    m = read_matrix(is_int)
     solve_gauss(m)
-    print("")
+    print("\nResult matrix:")
     print_matrix(m)
     
