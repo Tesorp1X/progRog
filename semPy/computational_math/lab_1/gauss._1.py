@@ -8,20 +8,20 @@ def read_matrix(b, isInt=True):
     with open("input.txt") as file:
         n = int(file.readline())
         print("n = ", n)
+        matr = [[] for i in range(n)]
         if isInt:
-            matr = [[] for i in range(n)]
             for i in range(n):
                 matr[i] = [int(t) for t in file.readline().split()]
         else:
             for i in range(n):
-                matr[i] = float(file.readline.split())
+                matr[i] = [float(t) for t in file.readline().split()]
             '''matr = file.readlines()
             del matr[0]
             matr = [[float(n) for n in x.split()] for x in matr]'''
 
-        line = [float(t) for t in file.readline().split()]
-        for i in range(n):
-            b.append(line[i])
+            line = [float(t) for t in file.readline().split()]
+            for i in range(n):
+                b.append(line[i])
 
     print("Got matrix:")
     print_matrix(matr)
@@ -53,15 +53,28 @@ def solve_gauss(matr, b):
 
     first_line = []
     
+    x = [t for t in b]
+    
+
     line_index = 0
+
     while (line_index < n):
+
         if (matr[line_index][line_index] != 0):
+
             first_line = matr[line_index]
+            x_index = line_index
             for this_line in matr[(line_index + 1)::]:
+                x_index += 1
                 if (this_line[line_index] != 0):
+
                     a = this_line[line_index]
+
                     for i in range(line_index, n):
+
                         this_line[i] -= float((first_line[i] / first_line[line_index]) * a)
+    
+                    x[x_index] -= float((x[line_index] / first_line[line_index]) * a)
 
             line_index += 1
 
@@ -70,7 +83,6 @@ def solve_gauss(matr, b):
         else:
             break
 
-    x = [t for t in b]
     if matr[n - 1][n - 1] != 0:
         x[n - 1] /= matr[n - 1][n - 1]
     i = n - 2
@@ -98,7 +110,7 @@ if __name__ == "__main__":
     attempt = 0
     while attempt < 10:
 
-        is_int = input("Выбирете тип матрицы:\n1. Int\n2. float\n3. Generate randomly.")
+        is_int = input("Выбирете тип матрицы:\n1. Int\n2. float\n3. Generate randomly.\n")
         
         if is_int == '1':
             is_int = True
