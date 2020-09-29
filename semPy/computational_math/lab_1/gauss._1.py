@@ -1,27 +1,38 @@
 """         Gauss Method for matrix m with sizes n x n.     """
 
+from fractions import Fraction
+import gilbert_matrix
 
 # File inpur through input.txt #
 
-def read_matrix(b, isInt=True):
+def read_matrix(b, type_of_values):
 
     with open("input.txt") as file:
         n = int(file.readline())
         print("n = ", n)
         matr = [[] for i in range(n)]
-        if isInt:
+        if type_of_values == "int":
             for i in range(n):
                 matr[i] = [int(t) for t in file.readline().split()]
-        else:
+            line = [int(t) for t in file.readline().split()]
+        elif type_of_values == "float":
+
             for i in range(n):
                 matr[i] = [float(t) for t in file.readline().split()]
-            '''matr = file.readlines()
-            del matr[0]
-            matr = [[float(n) for n in x.split()] for x in matr]'''
 
             line = [float(t) for t in file.readline().split()]
+        elif type_of_values == "fraction":
             for i in range(n):
-                b.append(line[i])
+                temp = [str(t) for t in file.readline().split()]
+                for j in range(n):
+                    matr[j].append(Fraction(temp[j]))
+            temp = [str(t) for t in file.readline().split()]
+            line = []
+            for f_str in temp:
+                line.append(Fraction(f_str))
+            
+        for i in range(n):
+            b.append(line[i])
 
     print("Got matrix:")
     print_matrix(matr)
@@ -110,18 +121,23 @@ if __name__ == "__main__":
     attempt = 0
     while attempt < 10:
 
-        is_int = input("Выбирете тип матрицы:\n1. Int\n2. float\n3. Generate randomly.\n")
+        value_type = input("Выбирете тип матрицы:\n1. Int\n2. float\n3. Fraction\n4. Generate randomly.\n5. Generate Gilbert matrix")
         
-        if is_int == '1':
-            is_int = True
+        if value_type == '1':
+            value_type = "int"
             break
-        elif is_int == '2':
-            is_int = False
+        elif value_type == '2':
+            value_type = "float"
             break
-        elif is_int == '3':
+        elif value_type == '3':
+            value_type = "fraction"
+            break
+        elif value_type == '4':
             size = int(input("Введите размер: "))
             low, high = float(input("Введите нижнюю и верхнюю границы для чисел: ").split())
-
+        elif value_type == '5':
+            size = int(input("Введите размер: "))
+            
         else:
             print("Error: wrong argument.")
             attempt += 1
@@ -130,7 +146,7 @@ if __name__ == "__main__":
         exit(1)
     
     b = []
-    m = read_matrix(b, is_int)
+    m = read_matrix(b, value_type)
     x = solve_gauss(m, b)
 
     print("\nResult vector:")
