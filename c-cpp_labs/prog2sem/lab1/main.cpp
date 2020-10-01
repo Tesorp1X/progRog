@@ -1,87 +1,132 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <fstream>
-#include <string.h>
+#include <istream>
+#define BUFFER_SIZE 16
 
-
+//TODO: Deal with utf-8 strings.
 class String {
 private:
 
-	char* str;
+    unsigned int size;
 
-	size_t size;
+    unsigned int length;
 
-	String(size_t size) {
-		this->size = size;
-		str = new char[size + 1];
-		str[0] = '\0';
-	}
+    char* str;
+
 
 public:
+    /* Constructors */
+    explicit String()
+            : size(0), length(0), str(nullptr) {}
 
-	String() {
-		size = 0;
-		str = new char[size + 1];
-		str[0] = '\0';
-	}
+    explicit String(char symbol)
+            : size(1), length(1), str(new char[size]) {
 
-	String(char symbol) {
-		size = 1;
-		str = new char[size + 1];
-		str[0] = symbol;
-	}
+        str[0] = symbol;
 
-	String(size_t size, const char* str) {
-		this->size = size;
-		this->str = new char[size + 1];
-		strcpy(this->str, str);
-	}
+    }
 
-	~String() {
-		delete [] str;
-	}
+    String(unsigned int length, const char* str)
+            :  size(length + 1), length(length), str(new char[size]) {
+            //TODO: constructor for line of given length
+    }
 
-	String operator+(const String& other) {
-		String* new_str = new String(this->size + other.size);
-		strcat(strcat(new_str->str, this->str), other.str);
-		return *new_str;
-	}
 
-	/*String operator=(const String& other) {
-		delete this;
-		return { other.size, other.str };
-	}
-	*/
+    String(String& other)
+            : size(other.size), length(other.length), str(new char[other.size]) {
+                //TODO: Copy constructor
+    }
 
-	void printLine() const{
-		std::cout << this->str;
-	}
 
-	void prinLineIntoFile(std::ofstream fout) const{
-		fout << this->str;
-	}
 
-	void readLineFromFile(std::ifstream fin) {
-		
-	}
 
-	size_t length() const{
-		return this->size;
-	}
+    ~String() {
+        delete[] str;
+    }
+
+    /* Operators */
+    String operator+(const String& other) {
+            //TODO: String concatenation via + operator
+    }
+
+    friend std::ostream& operator<< (std::ostream& output, String& string) {
+
+        for (int i = 0; i < string.length; ++i){
+            output << string[i];
+        }
+
+        return output;
+    }
+
+    friend std::istream& operator>> (std::istream& input, String& string) {
+
+        char c;
+        unsigned int index = 0;
+        unsigned int line_length = 0;
+        unsigned int allocated_size = BUFFER_SIZE;
+        char* line = new char[BUFFER_SIZE];
+
+        c = input.get();
+        while (!input.eof() && (c != '\n' && c != '\r')) {
+
+            if (line_length >= allocated_size) {
+
+                char* new_line = new char[allocated_size + BUFFER_SIZE];
+                for (int i = 0; i < line_length; ++i) {
+                    new_line[i] = line[i];
+                }
+
+                delete[] line;
+                allocated_size += BUFFER_SIZE;
+                line = new_line;
+                new_line = nullptr;
+                line[index++] = c;
+                ++line_length;
+            } else {
+
+                line[index++] = c;
+                ++line_length;
+            }
+            c = input.get();
+        }
+
+        string.length = line_length;
+        string.size = line_length;
+        delete [] string.str;
+        string.str = new char[line_length];
+        for (int i = 0; i < line_length; ++i) {
+            string.str[i] = line[i];
+        }
+
+        delete [] line;
+
+        return input;
+    }
+
+    //TODO: operator() (unsigned int left, unsigned int right)
+
+
+    char operator[](unsigned int index){
+        return this->str[index];
+    }
+
+    /* Getters */
+    unsigned int getLength() const {
+        return this->length;
+    }
 
 };
 
 
 
 int main() {
-	char a[] = "aaaaa\0";
 
-	String* str1 = new String(strlen(a), a);
-	String* str2 = new String('s');
-	String str3 = *str1 + *str2;
+    String str1('f');
+    std::cout << str1 << std::endl;
 
+    String str2;
+    std::cin >> str2;
+    std::cout << str2 << std::endl;
 
-	str3.printLine();
-	std::cout << "\n" << str3.length();
-	return 0;
+    return 0;
 }
