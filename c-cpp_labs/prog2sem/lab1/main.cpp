@@ -64,8 +64,28 @@ public:
 
 
     /* Operators */
-    String operator+(const String& other) {
-        //TODO: String concatenation via + operator
+    //TODO: operator- deleting all substrings in this->str
+
+    String& operator= (const String& other) {
+
+        if (this != &other) {
+            char* tmp = new char [other.size];
+
+            for (unsigned int i = 0; i < size; ++i) {
+                tmp[i] = other.str[i];
+            }
+            delete [] this->str;
+            this->str = tmp;
+            this->size = other.size;
+            this->length = other.length;
+        }
+
+        return *this;
+    }
+
+
+    String operator+ (const String& other) {
+
         String result_str;
         result_str.str = new char[this->size + other.size];
         result_str.size = this->size + other.size;
@@ -82,10 +102,24 @@ public:
             
     }
 
-    String operator+=(const String& string) {
-        String str = *this;
-        str = str + string;
-        return {str.size, str.str};
+    String& operator+= (const String& string) {
+
+        char* tmp = new char[this->size + string.size];
+
+        for (unsigned int i = 0; i < this->size; ++i) {
+            tmp[i] = str[i];
+        }
+        for (unsigned int i = this->size; i < this->size + string.size; ++i) {
+            tmp[i] = string.str[i - this->size];
+        }
+
+        delete [] this->str;
+
+        this->str = tmp;
+        this->size += + string.size;
+        this->length += string.length;
+
+        return *this;
     }
 
     friend std::ostream& operator<< (std::ostream& output, String& string) {
@@ -153,8 +187,14 @@ public:
     }
 
 
-    //TODO: operator() (unsigned int left, unsigned int right)
     String operator() (unsigned int first, unsigned int last) {
+
+        if (first < 0 || first > this->length || last < first || last > this->length) {
+            std::cout << "Function operator() :: Error: wrong arguments." << std::endl;
+            std::cerr << "Function operator() :: Error: wrong arguments.";
+            exit(2);
+        }
+
         char* new_line = new char[last - first + 1];
         for (unsigned int i = first; i < last + 1; ++i) {
             new_line[i - first] = str[i];
@@ -166,6 +206,13 @@ public:
 
 
     char operator[](unsigned int index){
+
+        if (index > this->length) {
+            std::cout << "Function operator() :: Error: wrong arguments." << std::endl;
+            std::cerr << "Function operator() :: Error: wrong arguments.";
+            exit(2);
+        }
+
         return this->str[index];
     }
 
@@ -187,7 +234,7 @@ int main() {
     String str3 = str2 * 3;
     //str1 += str2;
     std::cout << str1 << std::endl << str2 << std::endl << str3;
-    //std::cout << str1(6, 7) << std::endl << str2 << std::endl;
+    //std::cout << str1 << std::endl << str2 << std::endl;
 
 
     return 0;
