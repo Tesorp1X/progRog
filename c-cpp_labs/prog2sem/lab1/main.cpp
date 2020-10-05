@@ -4,6 +4,11 @@
 #include <cstring>
 #define BUFFER_SIZE 16
 
+char* copyStr(char* dest, unsigned int orig_size, const char* orig);
+char* concatString(char* dest, unsigned int from, unsigned int orig_size, const char* orig);
+long firstIndexOf(char* str, unsigned int str_size, char* sub_str, unsigned int sub_str_size);
+
+
 //TODO: Deal with utf-8 strings.
 class String {
 private:
@@ -17,10 +22,7 @@ private:
     String(unsigned int size, const char* str)
             :  size(size), length(size), str(new char[size]) {
         //TODO: utf-8 option
-
-        for (unsigned int i = 0; i < size; ++i) {
-            this->str[i] = str[i];
-        }
+        copyStr(this->str, size, str);
     }
 
 
@@ -29,21 +31,21 @@ public:
     explicit String()
             : size(0), length(0), str(nullptr) {}
 
-    explicit String(char symbol)
+    String(char symbol)
             : size(1), length(1), str(new char[size]) {
             //TODO: utf-8 option
+
         str[0] = symbol;
 
     }
 
 
-    String(const char* str)
+    explicit String(const char* str)
             :  size(strlen(str)), length(strlen(str)), str(new char[strlen(str)]) {
             //TODO: utf-8 option
 
-        for (unsigned int i = 0; i < this->size; ++i) {
-            this->str[i] = str[i];
-        }
+        copyStr(this->str, length, str);
+
     }
 
 
@@ -51,9 +53,7 @@ public:
             : size(other.size), length(other.length), str(new char[other.size]) {
           //TODO: utf-8 option
 
-        for (unsigned int i = 0; i < size; ++i) {
-            this->str[i] = other.str[i];
-        }
+        copyStr(this->str, other.size, other.str);
 
     }
 
@@ -64,17 +64,16 @@ public:
 
 
     /* Operators */
-    //TODO: operator- deleting all substrings in this->str
 
     String& operator= (const String& other) {
 
         if (this != &other) {
             char* tmp = new char [other.size];
 
-            for (unsigned int i = 0; i < size; ++i) {
-                tmp[i] = other.str[i];
-            }
+            copyStr(tmp, other.size, other.str);
+
             delete [] this->str;
+
             this->str = tmp;
             this->size = other.size;
             this->length = other.length;
@@ -87,31 +86,24 @@ public:
     String operator+ (const String& other) {
 
         String result_str;
+
         result_str.str = new char[this->size + other.size];
         result_str.size = this->size + other.size;
         result_str.length = this->length + other.length;
 
-        for (int i = 0; i < this->size; ++i) {
-            result_str.str[i] = this->str[i];
-        }
-        for (int i = this->size; i < this->size + other.size; ++i) {
-            result_str.str[i] = other.str[i - this->size];
-        }
+        copyStr(result_str.str, this->size, this->str);
+        concatString(result_str.str, this->size, other.size, other.str);
+
 
         return {result_str.size, result_str.str};
-            
     }
 
     String& operator+= (const String& string) {
 
         char* tmp = new char[this->size + string.size];
 
-        for (unsigned int i = 0; i < this->size; ++i) {
-            tmp[i] = str[i];
-        }
-        for (unsigned int i = this->size; i < this->size + string.size; ++i) {
-            tmp[i] = string.str[i - this->size];
-        }
+        copyStr(tmp, this->size, this->str);
+        concatString(tmp, this->size, string.size, string.str);
 
         delete [] this->str;
 
@@ -177,9 +169,8 @@ public:
         string.size = line_length;
         delete [] string.str;
         string.str = new char[line_length];
-        for (unsigned int i = 0; i < line_length; ++i) {
-            string.str[i] = line[i];
-        }
+        copyStr(string.str, line_length, line);
+
 
         delete [] line;
 
@@ -194,6 +185,9 @@ public:
             std::cerr << "Function operator() :: Error: wrong arguments.";
             exit(2);
         }
+        if (last == first && last != this->length - 1) {
+            return {this->operator[](first)};
+        }
 
         char* new_line = new char[last - first + 1];
         for (unsigned int i = first; i < last + 1; ++i) {
@@ -202,7 +196,6 @@ public:
 
         return {last - first + 1, new_line};
     }
-
 
 
     char operator[](unsigned int index){
@@ -216,6 +209,22 @@ public:
         return this->str[index];
     }
 
+    String operator-(String& substr) {
+        unsigned int first_index = firstIndexOf(this->str, this->size, substr.str, substr.size);
+        String result = *this;
+        while (first_index != -1) {
+            if (result.length - first_index == substr.length) {
+                result = result(0, first_index - 1);
+                return {result.size, result.str};
+            }
+            result = result(0, first_index - 1) + result(first_index + substr.length, result.length - 1);
+            first_index = firstIndexOf(result.str, result.size, substr.str, substr.size);
+        }
+
+        return {result.size, result.str};
+    }
+
+
     /* Getters */
     unsigned int getLength() const {
         return this->length;
@@ -224,14 +233,57 @@ public:
 };
 
 
+char* copyStr(char* dest, unsigned int orig_size, const char* orig) {
+    for (unsigned int i = 0; i < orig_size; ++i) {
+        dest[i] = orig[i];
+    }
+
+    return dest;
+}
+
+char* concatString(char* dest, unsigned int from, unsigned int orig_size, const char* orig) {
+    for (unsigned int i = from; i < from + orig_size; ++i) {
+        dest[i] = orig[i - from];
+    }
+
+    return dest;
+}
+
+
+/*  Returns first index of sub_str in str. If there is no such substring returns -1. */
+long firstIndexOf(char* str, unsigned int str_size, char* sub_str, unsigned int sub_str_size) {
+
+    bool flag = false;
+    unsigned int i = 0;
+    unsigned int result = 0;
+    while (i < str_size - sub_str_size + 1) {
+        if (str[i] == sub_str[0]) {
+            result = i;
+            flag = true;
+            for (unsigned int sub_str_inx = 0; sub_str_inx < sub_str_size; ++sub_str_inx) {
+                if (str[i] != sub_str[sub_str_inx]) {
+                    flag = false;
+                    break;
+                } else {
+                    ++i;
+                    continue;
+                }
+            }
+            if (flag) return result;
+        } else {
+            ++i;
+        }
+    }
+    return -1;
+}
 
 int main() {
 
     String str1("Hello world!");
-    //String str1('h');
-    String str2 = str1(6, 11);
+    String str4('h');
+    String str2 = str1(6, 8);
     //String str2 = str1;
-    String str3 = str2 * 3;
+    String str3 = str1 - str2 + str4;
     //str1 += str2;
     std::cout << str1 << std::endl << str2 << std::endl << str3;
     //std::cout << str1 << std::endl << str2 << std::endl;
