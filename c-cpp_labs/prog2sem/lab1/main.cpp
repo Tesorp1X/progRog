@@ -2,11 +2,13 @@
 #include <fstream>
 #include <istream>
 #include <cstring>
+#include <ctime>
 #define BUFFER_SIZE 16
 
 char* copyStr(char* dest, unsigned int orig_size, const char* orig);
 char* concatString(char* dest, unsigned int from, unsigned int orig_size, const char* orig);
-long firstIndexOf(char* str, unsigned int str_size, char* sub_str, unsigned int sub_str_size);
+long firstIndexOf(const char* str, unsigned int str_size, const char* sub_str, unsigned int sub_str_size);
+
 
 
 //TODO: Deal with utf-8 strings.
@@ -96,6 +98,14 @@ public:
 
 
         return {result_str.size, result_str.str};
+    }
+
+    /*  original_str is null-terminated string!  */
+    String operator+ (const char* original_str) {
+
+        String string(original_str);
+
+        return *this + string;
     }
 
     String& operator+= (const String& string) {
@@ -224,17 +234,96 @@ public:
         return {result.size, result.str};
     }
 
+    bool operator== (String& other) {
+
+        if (this->length != other.length) return false;
+
+        for (unsigned int i = 0; i < other.length; ++i) {
+            if (this->operator[](i) != other[i]) return false;
+        }
+
+        return true;
+
+    }
+
+    bool operator!= (String& other) {
+
+        return !(*this == other);
+    }
+
+
+    void replace(String& pattern, String& replace, unsigned int start_index) {
+
+        if (pattern == replace) return;
+
+        String result;
+
+        if (start_index == 0 && start_index + pattern.length == this->length) {
+
+            result = replace;
+
+        } else if (start_index == 0) {
+
+            result = replace + this->operator()(start_index + pattern.length, this->length - 1);
+
+        } else if (start_index + pattern.length == this->length) {
+
+            result = this->operator()(0, start_index - 1) + replace;
+
+        } else {
+
+            result = this->operator()(0, start_index - 1)
+                            + replace
+                            + this->operator()(start_index + pattern.length, this->length - 1);
+
+        }
+
+        *this = result;
+
+    }
+
+    void replace(String& pattern, String& replace) {
+
+        String result = *this;
+
+        unsigned int start_index = firstIndexOf(result.str, result.size, pattern.str, pattern.size);
+
+        result.replace(pattern, replace, start_index);
+
+        *this = result;
+
+    }
+
 
     /* Getters */
     unsigned int getLength() const {
         return this->length;
     }
 
+    String replaceAll(String& pattern, String& replacement) {
+
+        if (pattern == replacement) return *this;
+
+        String result = *this;
+        long first_index = firstIndexOf(result.str, result.size, pattern.str, pattern.size);
+
+        while (first_index != -1) {
+
+            result.replace(pattern, replacement, first_index);
+            first_index = firstIndexOf(result.str, result.size, pattern.str, pattern.size);
+
+        }
+
+        return {result.size, result.str};
+    }
+
 };
 
 
 char* copyStr(char* dest, unsigned int orig_size, const char* orig) {
+
     for (unsigned int i = 0; i < orig_size; ++i) {
+
         dest[i] = orig[i];
     }
 
@@ -242,7 +331,9 @@ char* copyStr(char* dest, unsigned int orig_size, const char* orig) {
 }
 
 char* concatString(char* dest, unsigned int from, unsigned int orig_size, const char* orig) {
+
     for (unsigned int i = from; i < from + orig_size; ++i) {
+
         dest[i] = orig[i - from];
     }
 
@@ -251,43 +342,60 @@ char* concatString(char* dest, unsigned int from, unsigned int orig_size, const 
 
 
 /*  Returns first index of sub_str in str. If there is no such substring returns -1. */
-long firstIndexOf(char* str, unsigned int str_size, char* sub_str, unsigned int sub_str_size) {
+long firstIndexOf(const char* str, unsigned int str_size, const char* sub_str, unsigned int sub_str_size) {
 
     bool flag = false;
     unsigned int i = 0;
     unsigned int result = 0;
+
     while (i < str_size - sub_str_size + 1) {
+
         if (str[i] == sub_str[0]) {
+
             result = i;
             flag = true;
             for (unsigned int sub_str_inx = 0; sub_str_inx < sub_str_size; ++sub_str_inx) {
+
                 if (str[i] != sub_str[sub_str_inx]) {
                     flag = false;
                     break;
                 } else {
+
                     ++i;
                     continue;
                 }
             }
             if (flag) return result;
         } else {
+
             ++i;
         }
     }
     return -1;
 }
 
+
+
 int main() {
 
-    String str1("Hello world!");
-    String str4('h');
-    String str2 = str1(6, 8);
-    //String str2 = str1;
-    String str3 = str1 - str2 + str4;
-    //str1 += str2;
-    std::cout << str1 << std::endl << str2 << std::endl << str3;
-    //std::cout << str1 << std::endl << str2 << std::endl;
+    //unsigned int start_time =  clock();
 
+    String string;
+    String pattern;
+    String replacement;
 
+    std::ifstream fin("input.txt");
+
+    fin >> string >> pattern >> replacement;
+    fin.close();
+
+    String result = string.replaceAll(pattern, replacement);
+
+    std::ofstream fout("output.txt");
+
+    fout << result;
+    fout.close();
+
+    
     return 0;
 }
