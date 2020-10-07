@@ -378,8 +378,6 @@ long firstIndexOf(const char* str, unsigned int str_size, const char* sub_str, u
 
 int main() {
 
-    //unsigned int start_time =  clock();
-
     String string;
     String pattern;
     String replacement;
@@ -396,6 +394,6 @@ int main() {
     fout << result;
     fout.close();
 
-    
+
     return 0;
 }
