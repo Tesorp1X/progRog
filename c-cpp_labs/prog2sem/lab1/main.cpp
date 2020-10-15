@@ -70,11 +70,16 @@ public:
 
         if (this != &other) {
 
-            String temp(other.size, other.str);
+            char* tmp = new char [other.size];
+            copyStr(tmp, other.size, other.str);
 
-            this->str = temp.str;
-            this->size = temp.size;
-            this->length = temp.length;
+            delete [] this->str;
+
+            this->str = tmp;
+            this->size = other.size;
+            this->length = other.length;
+
+
         }
 
         return *this;
@@ -108,11 +113,12 @@ public:
         copyStr(temp.str, this->size, this->str);
         concatString(temp.str, this->size, string.size, string.str);
 
-        delete [] this->str;
+        //delete [] this->str;
 
-        this->str = temp.str;
-        this->size += + temp.size;
-        this->length += temp.length;
+        /*this->str = temp.str;
+        this->size += temp.size;
+        this->length += temp.length;*/
+        *this = temp;
 
         return *this;
     }
@@ -130,13 +136,14 @@ public:
     String operator* (unsigned int repeats) {
 
         String string = *this;
-
+        String result = *this;
         for (unsigned int i = 1; i < repeats; ++i) {
 
-            string += string;
+            result += string;
         }
 
-        return {this->size * repeats, string.str};
+
+        return result;
     }
 
 
@@ -195,12 +202,12 @@ public:
             return {(*this)[first]};
         }
 
-        char* new_line = new char[last - first + 1];
+        String new_line(last - first + 1);
         for (unsigned int i = first; i < last + 1; ++i) {
             new_line[i - first] = str[i];
         }
 
-        return {last - first + 1, new_line};
+        return {last - first + 1, new_line.str};
     }
 
 
@@ -367,7 +374,7 @@ long firstIndexOf(const char* str, unsigned int str_size, const char* sub_str, u
                 }
             }
             if (flag) return result;
-            
+
         } else {
 
             ++i;
@@ -390,6 +397,7 @@ int main() {
     fin.close();
 
     String result = string.replaceAll(pattern, replacement);
+
 
     std::ofstream fout("output.txt");
 
