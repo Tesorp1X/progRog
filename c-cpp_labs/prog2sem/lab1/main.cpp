@@ -11,7 +11,7 @@ long firstIndexOf(const char* str, unsigned int str_size, const char* sub_str, u
 
 
 
-//TODO: Deal with utf-8 strings.
+
 class String {
 private:
 
@@ -23,10 +23,12 @@ private:
 
     String(unsigned int size, const char* str)
             :  size(size), length(size), str(new char[size]) {
-        //TODO: utf-8 option
+
         copyStr(this->str, size, str);
     }
 
+    String(unsigned int size)
+            : size(size), length(size), str(new char[size]) {}
 
 public:
     /* Constructors */
@@ -35,7 +37,6 @@ public:
 
     String(char symbol)
             : size(1), length(1), str(new char[size]) {
-            //TODO: utf-8 option
 
         str[0] = symbol;
 
@@ -44,7 +45,6 @@ public:
 
     explicit String(const char* str)
             :  size(strlen(str)), length(strlen(str)), str(new char[strlen(str)]) {
-            //TODO: utf-8 option
 
         copyStr(this->str, length, str);
 
@@ -53,7 +53,6 @@ public:
 
     String(const String& other)
             : size(other.size), length(other.length), str(new char[other.size]) {
-          //TODO: utf-8 option
 
         copyStr(this->str, other.size, other.str);
 
@@ -70,15 +69,12 @@ public:
     String& operator= (const String& other) {
 
         if (this != &other) {
-            char* tmp = new char [other.size];
 
-            copyStr(tmp, other.size, other.str);
+            String temp(other.size, other.str);
 
-            delete [] this->str;
-
-            this->str = tmp;
-            this->size = other.size;
-            this->length = other.length;
+            this->str = temp.str;
+            this->size = temp.size;
+            this->length = temp.length;
         }
 
         return *this;
@@ -87,11 +83,7 @@ public:
 
     String operator+ (const String& other) {
 
-        String result_str;
-
-        result_str.str = new char[this->size + other.size];
-        result_str.size = this->size + other.size;
-        result_str.length = this->length + other.length;
+        String result_str(this->size + other.size);
 
         copyStr(result_str.str, this->size, this->str);
         concatString(result_str.str, this->size, other.size, other.str);
@@ -100,7 +92,7 @@ public:
         return {result_str.size, result_str.str};
     }
 
-    /*  original_str is null-terminated string!  */
+    /*  original_str is C-style string!  */
     String operator+ (const char* original_str) {
 
         String string(original_str);
@@ -110,23 +102,25 @@ public:
 
     String& operator+= (const String& string) {
 
-        char* tmp = new char[this->size + string.size];
 
-        copyStr(tmp, this->size, this->str);
-        concatString(tmp, this->size, string.size, string.str);
+        String temp(this->size + string.size);
+
+        copyStr(temp.str, this->size, this->str);
+        concatString(temp.str, this->size, string.size, string.str);
 
         delete [] this->str;
 
-        this->str = tmp;
-        this->size += + string.size;
-        this->length += string.length;
+        this->str = temp.str;
+        this->size += + temp.size;
+        this->length += temp.length;
 
         return *this;
     }
 
     friend std::ostream& operator<< (std::ostream& output, String& string) {
 
-        for (int i = 0; i < string.length; ++i){
+        for (int i = 0; i < string.length; ++i) {
+
             output << string[i];
         }
 
@@ -134,8 +128,11 @@ public:
     }
 
     String operator* (unsigned int repeats) {
+
         String string = *this;
+
         for (unsigned int i = 1; i < repeats; ++i) {
+
             string += string;
         }
 
@@ -157,9 +154,7 @@ public:
             if (line_length >= allocated_size) {
 
                 char* new_line = new char[allocated_size + BUFFER_SIZE];
-                for (unsigned int i = 0; i < line_length; ++i) {
-                    new_line[i] = line[i];
-                }
+                copyStr(new_line, line_length, line);
 
                 delete[] line;
                 allocated_size += BUFFER_SIZE;
@@ -182,7 +177,7 @@ public:
         copyStr(string.str, line_length, line);
 
 
-        delete [] line;
+        delete[] line;
 
         return input;
     }
@@ -195,8 +190,9 @@ public:
             std::cerr << "Function operator() :: Error: wrong arguments.";
             exit(2);
         }
-        if (last == first && last != this->length - 1) {
-            return {this->operator[](first)};
+
+        if (last == first) {
+            return {(*this)[first]};
         }
 
         char* new_line = new char[last - first + 1];
@@ -208,7 +204,7 @@ public:
     }
 
 
-    char operator[](unsigned int index){
+    char& operator[] (unsigned int index){
 
         if (index > this->length) {
             std::cout << "Function operator() :: Error: wrong arguments." << std::endl;
@@ -219,14 +215,19 @@ public:
         return this->str[index];
     }
 
-    String operator-(String& substr) {
+    String operator- (String& substr) {
+
         unsigned int first_index = firstIndexOf(this->str, this->size, substr.str, substr.size);
         String result = *this;
+
         while (first_index != -1) {
+
             if (result.length - first_index == substr.length) {
+
                 result = result(0, first_index - 1);
                 return {result.size, result.str};
             }
+
             result = result(0, first_index - 1) + result(first_index + substr.length, result.length - 1);
             first_index = firstIndexOf(result.str, result.size, substr.str, substr.size);
         }
@@ -239,7 +240,7 @@ public:
         if (this->length != other.length) return false;
 
         for (unsigned int i = 0; i < other.length; ++i) {
-            if (this->operator[](i) != other[i]) return false;
+            if ((*this)[i] != other[i]) return false;
         }
 
         return true;
@@ -252,7 +253,7 @@ public:
     }
 
 
-    void replace(String& pattern, String& replace, unsigned int start_index) {
+    void replace (String& pattern, String& replace, unsigned int start_index) {
 
         if (pattern == replace) return;
 
@@ -264,17 +265,17 @@ public:
 
         } else if (start_index == 0) {
 
-            result = replace + this->operator()(start_index + pattern.length, this->length - 1);
+            result = replace + (*this)(start_index + pattern.length, this->length - 1);
 
         } else if (start_index + pattern.length == this->length) {
 
-            result = this->operator()(0, start_index - 1) + replace;
+            result = (*this)(0, start_index - 1) + replace;
 
         } else {
 
             result = this->operator()(0, start_index - 1)
                             + replace
-                            + this->operator()(start_index + pattern.length, this->length - 1);
+                            + (*this)(start_index + pattern.length, this->length - 1);
 
         }
 
@@ -366,6 +367,7 @@ long firstIndexOf(const char* str, unsigned int str_size, const char* sub_str, u
                 }
             }
             if (flag) return result;
+            
         } else {
 
             ++i;
