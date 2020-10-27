@@ -1,4 +1,4 @@
-package com.company;
+package com.codeforces;
 
 import java.io.*;
 import java.util.ArrayList;
