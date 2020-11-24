@@ -15,25 +15,60 @@ long firstIndexOf(const char* str, unsigned int str_size, const char* sub_str, u
 class String {
 private:
 
+    bool is_wide = false;
+
     unsigned int size;
 
     unsigned int length;
 
     char* str;
 
-    String(unsigned int size, const char* str)
-            :  size(size), length(size), str(new char[size]) {
 
+
+
+    String(unsigned int size, const char* str)
+            : size(size), length(0), str(new char[size]) {
+
+        bool flag = false;
+
+        /* Computing the right length. */
+        for (unsigned int i = 0; i < this->size;) {
+
+            if (((unsigned char)str[i]) >> 7 == 0) {
+                this->length++;
+                i++;
+            } else if (((unsigned char)str[i]) >> 5 == 6) {
+                this->length++;
+                i += 2;
+                flag = true;
+            } else if (((unsigned char)str[i]) >> 4 == 14) {
+                this->length++;
+                i += 3;
+                flag = true;
+            } else if (((unsigned char)str[i]) >> 3 == 30) {
+                this->length++;
+                i += 4;
+                flag = true;
+            }
+        }
+        this->is_wide = flag;
         copyStr(this->str, size, str);
     }
 
+
     String(unsigned int size)
             : size(size), length(size), str(new char[size]) {}
+
+
+    String(unsigned int size, char wide_flag)
+            : is_wide(wide_flag == 'w'), size(size), length(size), str(new char[size]) {}
+
 
 public:
     /* Constructors */
     explicit String()
             : size(0), length(0), str(nullptr) {}
+
 
     String(char symbol)
             : size(1), length(1), str(new char[size]) {
@@ -51,8 +86,10 @@ public:
     }
 
 
+
+
     String(const String& other)
-            : size(other.size), length(other.length), str(new char[other.size]) {
+            :  is_wide(other.is_wide), size(other.size), length(other.length), str(new char[other.size]) {
 
         copyStr(this->str, other.size, other.str);
 
@@ -75,10 +112,10 @@ public:
 
             delete [] this->str;
 
+            this->is_wide = other.is_wide;
             this->str = tmp;
             this->size = other.size;
             this->length = other.length;
-
 
         }
 
@@ -97,6 +134,7 @@ public:
         return {result_str.size, result_str.str};
     }
 
+
     /*  original_str is C-style string!  */
     String operator+ (const char* original_str) {
 
@@ -113,11 +151,6 @@ public:
         copyStr(temp.str, this->size, this->str);
         concatString(temp.str, this->size, string.size, string.str);
 
-        //delete [] this->str;
-
-        /*this->str = temp.str;
-        this->size += temp.size;
-        this->length += temp.length;*/
         *this = temp;
 
         return *this;
@@ -125,9 +158,9 @@ public:
 
     friend std::ostream& operator<< (std::ostream& output, String& string) {
 
-        for (int i = 0; i < string.length; ++i) {
+        for (int i = 0; i < string.size; ++i) {
 
-            output << string[i];
+            output << string.str[i];
         }
 
         return output;
@@ -152,6 +185,7 @@ public:
         char c;
         unsigned int index = 0;
         unsigned int line_length = 0;
+        unsigned int line_size = 0;
         unsigned int allocated_size = BUFFER_SIZE;
         char* line = new char[BUFFER_SIZE];
 
@@ -161,28 +195,25 @@ public:
             if (line_length >= allocated_size) {
 
                 char* new_line = new char[allocated_size + BUFFER_SIZE];
-                copyStr(new_line, line_length, line);
+                copyStr(new_line, line_size, line);
 
                 delete[] line;
                 allocated_size += BUFFER_SIZE;
                 line = new_line;
                 new_line = nullptr;
                 line[index++] = c;
-                ++line_length;
+                ++line_size;
             } else {
 
                 line[index++] = c;
-                ++line_length;
+                ++line_size;
             }
             c = input.get();
         }
 
-        string.length = line_length;
-        string.size = line_length;
-        delete [] string.str;
-        string.str = new char[line_length];
-        copyStr(string.str, line_length, line);
 
+        String result(line_size, line);
+        string = result;
 
         delete[] line;
 
@@ -190,14 +221,13 @@ public:
     }
 
 
-    String operator() (unsigned int first, unsigned int last) {
+    String operator() (unsigned int first, unsigned int last) const{
 
         if (first < 0 || first > this->length || last < first || last > this->length) {
             std::cout << "Function operator() :: Error: wrong arguments." << std::endl;
             std::cerr << "Function operator() :: Error: wrong arguments.";
             exit(2);
         }
-
         if (last == first) {
             return {(*this)[first]};
         }
@@ -211,7 +241,7 @@ public:
     }
 
 
-    char& operator[] (unsigned int index){
+    char& operator[] (unsigned int index) const{
 
         if (index > this->length) {
             std::cout << "Function operator() :: Error: wrong arguments." << std::endl;
@@ -219,8 +249,32 @@ public:
             exit(2);
         }
 
-        return this->str[index];
+        if (!this->is_wide) return this->str[index];
+
+        unsigned int i = 0, len_so_far = 0;
+
+        for ( ; i < this->size && len_so_far != index; ) {
+            if (((unsigned char)str[i]) >> 7 == 0) {
+                len_so_far++;
+                i++;
+            } else if (((unsigned char)str[i]) >> 5 == 6) {
+                len_so_far++;
+                i += 2;
+            } else if (((unsigned char)str[i]) >> 4 == 14) {
+                len_so_far++;
+                i += 3;
+            } else if (((unsigned char)str[i]) >> 3 == 30) {
+                len_so_far++;
+                i += 4;
+            }
+
+        }
+
+        return this->str[len_so_far];
+
     }
+
+    
 
     String operator- (String& substr) {
 
@@ -242,7 +296,8 @@ public:
         return {result.size, result.str};
     }
 
-    bool operator== (String& other) {
+
+    bool operator== (String& other) const{
 
         if (this->length != other.length) return false;
 
@@ -254,7 +309,7 @@ public:
 
     }
 
-    bool operator!= (String& other) {
+    bool operator!= (String& other) const{
 
         return !(*this == other);
     }
@@ -308,6 +363,10 @@ public:
         return this->length;
     }
 
+    unsigned int getSize() const {
+        return this->size;
+    }
+
     String replaceAll(String& pattern, String& replacement) {
 
         if (pattern == replacement) return *this;
@@ -337,6 +396,7 @@ char* copyStr(char* dest, unsigned int orig_size, const char* orig) {
 
     return dest;
 }
+
 
 char* concatString(char* dest, unsigned int from, unsigned int orig_size, const char* orig) {
 
@@ -396,12 +456,13 @@ int main() {
     fin >> string >> pattern >> replacement;
     fin.close();
 
-    String result = string.replaceAll(pattern, replacement);
+    //String result = string.replaceAll(pattern, replacement);
 
-
+    String * str = new String();
     std::ofstream fout("output.txt");
 
-    fout << result;
+    //fout << result;
+    fout << string << std::endl << string.getLength() << std::endl << string.getSize();
     fout.close();
 
 

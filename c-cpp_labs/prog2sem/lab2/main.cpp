@@ -3,8 +3,7 @@
 #include <fstream>
 #include <algorithm>
 
-unsigned int countSetBits(unsigned int n)
-{
+unsigned int countSetBits(unsigned int n) {
     unsigned int count = 0;
 
     while (n) {
@@ -26,15 +25,8 @@ int countLength(int n) {
     return count;
 }
 
-void swap(int *xp, int *yp)
-{
-    int temp = *xp;
-    *xp = *yp;
-    *yp = temp;
-}
 
-
-class Order{
+class Order {
 
 public:
     virtual void sort(int* array, unsigned int size) = 0;
@@ -138,42 +130,13 @@ Order* getTheRightOrder(std::string order_line) {
 
         case 'L':
 
-            if (order_line[1] == 'A') {
-
-                order = new ByLength(new Ascending());
-
-            } else if (order_line[1] == 'D') {
-
-                order = new ByLength(new Descending());
-
-            }else if (order_line[1] == 'L' || order_line[1] == 'B') {
-
-                order = new ByLength(getTheRightOrder(order_line.substr(1, order_line.length() - 1)));
-
-            }else {
-                std::cerr << "Function getTheRightOrder(std::string order_line) :: Error: wrong arguments.";
-                exit(2);
-            }
+            order = new ByLength(getTheRightOrder(order_line.substr(1, order_line.length() - 1)));
 
             break;
 
         case 'B':
 
-            if (order_line[1] == 'A') {
-
-                order = new ByBitCount(new Ascending());
-
-            } else if (order_line[1] == 'D') {
-
-                order = new ByBitCount(new Descending());
-
-            } else if (order_line[1] == 'L' || order_line[1] == 'B') {
-
-                order = new ByBitCount(getTheRightOrder(order_line.substr(1, order_line.length() - 1)));
-            } else {
-                std::cerr << "Function getTheRightOrder(std::string order_line) :: Error: wrong arguments.";
-                exit(2);
-            }
+            order = new ByBitCount(getTheRightOrder(order_line.substr(1, order_line.length() - 1)));
 
             break;
 
