@@ -7,17 +7,18 @@ template <typename K, typename V>
 struct HashPair {
     K key;
     V value;
+    const bool is_end;
 
-    HashPair() = default;
+    HashPair(bool is_end) : is_end(is_end) {}
 
-    HashPair(K k, V v) {
-        key = k;
-        value = v;
-    }
+    HashPair() : is_end(false) { }
+
+    HashPair(K& k, V& v) : key(k), value(v), is_end(false) { }
 
     HashPair(HashPair& other) {
         this->key = other.key;
         this->value = other.value;
+        this->is_end = other.is_end;
     }
 
     bool operator== (HashPair const & other) {
@@ -37,57 +38,25 @@ struct HashPair {
 };
 
 
-class HashMapException : std::exception {
-protected:
-    std::string message = "Something went wrong.";
-
-public:
-
-    virtual std::string getMessage() {
-        return message;
-    }
-
-    virtual void printReason() {
-        std::cout << message;
-    }
-
-    virtual void printReason(std::ofstream& out) {
-        out << message;
-    }
-};
-
-class KeyIsNotUniqueException : public HashMapException {
-public:
-    KeyIsNotUniqueException() {
-        message = "Key mast be an unique entity of type K.";
-    }
-
-};
-
-class NoSuchElementException : public HashMapException {
-public:
-    NoSuchElementException() {
-       message = "No such element in HashMap.";
-    }
-};
-
-
 template <typename K, typename V>
 class HashMap {
 
 private:
+    HashPair<K, V> * fakeEndNote = new HashPair<K, V>(true);
     const unsigned int DEFAULT_ARRAY_SIZE = 1 << 4;
-    const unsigned int OK_LOAD_FACTOR = 0.8;
+    const double OK_LOAD_FACTOR = 0.8;
     unsigned int size = DEFAULT_ARRAY_SIZE;
-    unsigned int deleted;
-    unsigned int used;
+    unsigned int deleted = 0;
+    unsigned int used = 0;
 
 
     HashPair<K, V> **items;
 
     explicit HashMap(size_t size)
             : size(size),used(0), deleted(0),
-              items(new HashPair<K, V> *[size]()) {}
+              items(new HashPair<K, V> *[size + 1]()) {
+        items[size] = fakeEndNote;
+    }
 
 
     template<typename T>
@@ -127,10 +96,6 @@ private:
         /*
          * Go through map and add all elements to new bigger map. Then delete it.
          */
-        //Debug only
-        /*std::cout << "Before rehash :" << std::endl;
-        print();*/
-
         unsigned int old_size = size;
         if (to_increase) {
             size <<= 1;
@@ -138,28 +103,21 @@ private:
             size >>= 1;
         }
 
-        auto new_items = new HashPair<K, V>*[size]();
+        auto new_items = new HashPair<K, V>*[size + 1]();
+        new_items[size] = fakeEndNote;
 
         for (unsigned int i = 0; i < old_size; ++i) {
 
             if (items[i] != nullptr) {
 
-                K key = items[i]->key;
-                V val = items[i]->value;
-
                 /*  Inserting old new elements. */
                 unsigned int new_index = hashCode(items[i]->key);
-
                 rawPut(items[i], new_index, new_items);
 
             }
         }
         delete [] items;
         items = new_items;
-
-        //Debug only
-        /*std::cout << "After rehash :" << std::endl;
-        print();*/
     }
 
     /**
@@ -203,10 +161,13 @@ public:
         }
 
         delete [] items;
+        //delete fakeEndNote;
     }
 
 
-    HashMap(): used(0), deleted(0), items(new HashPair<K, V> *[size]()) {}
+    HashMap(): used(0), deleted(0), items(new HashPair<K, V> *[size + 1]()) {
+        items[size] = fakeEndNote;
+    }
 
 
     void put(K& key, V& value) {
@@ -225,6 +186,7 @@ public:
     }
 
     V& getValueByKey(K& key) {
+
         unsigned int index = findPairIndexByKey(key);
 
         if (index == -1) return nullptr;
@@ -308,7 +270,62 @@ public:
     }
 
 
-    //Iterator
+    //iterator
+    class iterator {
+    private:
+        HashPair<K, V> ** node_ptr;
+
+
+    public:
+        //++it. it->
+
+        iterator(iterator const &start) : node_ptr(start.node_ptr) {}
+
+
+        iterator(HashPair<K, V> ** pair_ptr, bool flag) : node_ptr(pair_ptr) {}
+
+        HashPair<K, V> * operator*() const {
+            return *node_ptr;
+        }
+
+        HashPair<K, V> * operator->() const {
+            return *node_ptr;
+        }
+
+        iterator& operator++() {
+            ++(this->node_ptr);
+            //std::cout << "Address for operator++ " << this << std::endl;
+            while(*(this->node_ptr) == nullptr) {
+                ++(this->node_ptr);
+                //std::cout << "Skipped address : " << this << std::endl;
+
+            }
+
+            return *this;
+        }
+
+        bool operator!=(const iterator& other) const {
+            if (this->node_ptr != nullptr && this->node_ptr == other.node_ptr) {
+                return false;
+            }
+
+            return true;
+        }
+
+
+
+    };
+
+    HashMap<K, V>::iterator begin() const {
+        HashPair<K, V> ** ptr = items;
+        while (*ptr == nullptr) {
+            ptr++;
+        }
+
+        return { ptr, true };
+    }
+
+    HashMap<K, V>::iterator end() const { return {items + size, true}; }
    
 };
 
@@ -331,12 +348,11 @@ HashMap<K ,V> * constructHashMap(std::istream& in, int n) {
                 in >> k;
 
                 if (!hashMap->remove(k)) {
-                    std::cerr << "No such element in the table.";
+                    std::cerr << "No such element in the table." << std::endl;
                 }
                 break;
             default:
                 break;
-
         }
 
     }
@@ -344,10 +360,46 @@ HashMap<K ,V> * constructHashMap(std::istream& in, int n) {
     return hashMap;
 }
 
+template <typename K>
+void solve_task(const char* type_str, int n, std::istream& fin, std::ostream& fout) {
+    switch (type_str[1]) {
+        case 'I': {
+            HashMap<K, int> *hashMap = constructHashMap<K, int>(fin, n);
+            fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
+
+            for (auto it : *hashMap) {
+                std::cout << "key: " << it->key << " val: " << it->value << std::endl;
+            }
+
+            delete hashMap;
+            break;
+        }
+        case 'D': {
+            HashMap<K, double> *hashMap = constructHashMap<K, double>(fin, n);
+            fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
+
+            for (auto it : *hashMap) {
+                std::cout << "key: " << it->key << " val: " << it->value << std::endl;
+            }
+
+            delete hashMap;
+            break;
+        }
+        case 'S': {
+            HashMap<K, std::string> *hashMap = constructHashMap<K, std::string>(fin, n);
+            fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
+
+            for (auto it : *hashMap) {
+                std::cout << "key: " << it->key << " val: " << it->value << std::endl;
+            }
+
+            delete hashMap;
+            break;
+        }
+    }
+}
 
 int main() {
-
-
 
     char type_str[2];
     std::ifstream fin("input.txt");
@@ -356,79 +408,19 @@ int main() {
     int n;
     fin >> n;
 
-
-
     std::ofstream fout("output.txt");
-
 
     if (type_str[0] == 'I') {
 
-        switch (type_str[1]) {
-            case 'I': {
-                HashMap<int, int> *hashMap = constructHashMap<int, int>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-            case 'D': {
-                HashMap<int, double> *hashMap = constructHashMap<int, double>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-            case 'S': {
-                HashMap<int, std::string> *hashMap = constructHashMap<int, std::string>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-        }
+        solve_task<int>(type_str, n, fin, fout);
 
     } else if (type_str[0] == 'D') {
 
-        switch (type_str[1]) {
-            case 'I': {
-                HashMap<double, int> *hashMap = constructHashMap<double, int>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-            case 'D': {
-                HashMap<double, double> *hashMap = constructHashMap<double, double>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-            case 'S': {
-                HashMap<double, std::string> *hashMap = constructHashMap<double, std::string>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-        }
+        solve_task<double>(type_str, n, fin, fout);
 
     } else if (type_str[0] == 'S') {
 
-        switch (type_str[1]) {
-            case 'I': {
-                HashMap<std::string, int> *hashMap = constructHashMap<std::string, int>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-            case 'D': {
-                HashMap<std::string, double> *hashMap = constructHashMap<std::string, double>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-            case 'S': {
-                HashMap<std::string, std::string> *hashMap = constructHashMap<std::string, std::string>(fin, n);
-                fout << hashMap->amountOfUsed() << " " << hashMap->amountOfUnique();
-                delete hashMap;
-                break;
-            }
-        }
+        solve_task<std::string>(type_str, n, fin, fout);
 
     }
 
